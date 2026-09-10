@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+.landing-page {
+  background: #f5f8fc;
+  color: #17263c;
+}
+
+.landing-nav {
+  background: rgba(255, 255, 255, 0.84);
+  border-bottom: 1px solid rgba(203, 213, 225, 0.7);
+  backdrop-filter: blur(18px);
+}
+
+.landing-nav-button,
+.landing-secondary-button {
+  background: #ffffff;
+  color: #243b5a;
+  border: 1px solid #d7e1ed;
+  box-shadow: 0 8px 20px rgba(37, 66, 103, 0.06);
+}
+
+.landing-nav-button:hover,
+.landing-secondary-button:hover {
+  border-color: #8bb8df;
+  background: #f8fbff;
+  transform: translateY(-1px);
+}
+
+.landing-hero {
+  background: linear-gradient(135deg, #f8fbff 0%, #eef5fb 52%, #e7f1f7 100%);
+}
+
+.landing-grid {
+  opacity: 0.55;
+  background-image: linear-gradient(rgba(82, 126, 166, 0.08) 1px, transparent 1px), linear-gradient(90deg, rgba(82, 126, 166, 0.08) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
+}
+
+.landing-orbit {
+  position: absolute;
+  border: 1px solid rgba(89, 145, 188, 0.18);
+  border-radius: 999px;
+  transform: rotate(-22deg);
+  pointer-events: none;
+}
+
+.landing-orbit-one {
+  width: 560px;
+  height: 180px;
+  right: -110px;
+  top: 42px;
+}
+
+.landing-orbit-two {
+  width: 420px;
+  height: 130px;
+  right: -30px;
+  top: 86px;
+  border-color: rgba(89, 145, 188, 0.1);
+}
+
+.landing-eyebrow {
+  color: #25628e;
+  background: rgba(220, 237, 249, 0.8);
+  border: 1px solid #b9d7eb;
+}
+
+.landing-title-accent {
+  color: #397eae;
+}
+
+.landing-description {
+  color: #52677f;
+}
+
+.landing-primary-button {
+  color: white;
+  background: #245f8d;
+  box-shadow: 0 14px 28px rgba(36, 95, 141, 0.22);
+}
+
+.landing-primary-button:hover {
+  background: #174b75;
+  transform: translateY(-2px);
+  box-shadow: 0 17px 32px rgba(36, 95, 141, 0.28);
+}
+
+.landing-proof {
+  color: #7890a7;
+}
+
+.landing-dashboard-glow {
+  background: rgba(74, 145, 188, 0.2);
+  filter: blur(42px);
+}
+
+.landing-dashboard {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(193, 211, 226, 0.9);
+  box-shadow: 0 28px 70px rgba(38, 73, 105, 0.18);
+  animation: landing-float 7s ease-in-out infinite;
+}
+
+@keyframes landing-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@media (max-width: 640px) {
+  .landing-nav-button {
+    padding: 0.55rem 0.8rem;
+    font-size: 0.75rem;
+  }
+
+  .landing-orbit-one {
+    right: -310px;
+  }
+
+  .landing-orbit-two {
+    right: -240px;
+  }
+}
+
+@media print {
+  body {
+    background-color: white !important;
+    color: black !important;
+    font-size: 10px;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Make printable sheet container span the whole width and have no screen-based shadows/borders */
+  .printable-sheet {
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Prevent individual teacher cards from breaking mid-way across printed pages */
+  .break-inside-avoid {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  /* Configure horizontal / landscape A4 print template */
+  @page {
+    size: landscape;
+    margin: 0.8cm;
+  }
+}
+
+/* Force standard HEX colors on .printable-sheet to prevent html2canvas oklch parsing errors */
+.printable-sheet.bg-white,
+.printable-sheet .bg-white {
+  background-color: #ffffff !important;
+}
+
+.printable-sheet,
+.printable-sheet * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.printable-sheet.border-slate-200,
+.printable-sheet .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+.printable-sheet .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+.printable-sheet .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+.printable-sheet .border-blue-100 {
+  border-color: #dbeafe !important;
+}
+
+.printable-sheet .divide-slate-100 > * {
+  border-color: #f1f5f9 !important;
+}
+
+.printable-sheet .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+.printable-sheet .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+.printable-sheet .text-slate-900 {
+  color: #0f172a !important;
+}
+
+.printable-sheet .text-slate-800 {
+  color: #1e293b !important;
+}
+
+.printable-sheet .text-slate-700 {
+  color: #334155 !important;
+}
+
+.printable-sheet .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+.printable-sheet .text-slate-300 {
+  color: #cbd5e1 !important;
+}
+
+.printable-sheet .text-blue-600 {
+  color: #2563eb !important;
+}
+
