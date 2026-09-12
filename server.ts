@@ -78,7 +78,7 @@ app.post('/api/auth/register', async (req, res) => {
       body: JSON.stringify({
         uid,
         email,
-        displayName,
+        displayname: displayName,
         role: finalRole,
         subject: subject || null
       })
@@ -98,7 +98,7 @@ app.post('/api/auth/register', async (req, res) => {
       .from('users')
       .update({ school_id: finalSchoolId })
       .eq('uid', uid)
-      .select('uid,email,displayName,role,subject,school_id')
+      .select('uid,email,displayname,role,subject,school_id')
       .single();
 
     console.log('[REGISTER] Update result:', { userData, updateError });
@@ -124,7 +124,7 @@ app.post('/api/auth/login', async (req, res) => {
   try {
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('uid,email,displayName,role,subject,school_id')
+      .select('uid,email,displayname,role,subject,school_id')
       .eq('uid', authData.user.id)
       .maybeSingle();
 
@@ -227,7 +227,7 @@ app.post('/api/users/create', async (req, res) => {
       body: JSON.stringify({
         uid,
         email,
-        displayName,
+        displayname: displayName,
         role,
         subject: subject || null
       })
@@ -244,7 +244,7 @@ app.post('/api/users/create', async (req, res) => {
       .from('users')
       .update({ school_id: finalSchoolId })
       .eq('uid', uid)
-      .select('uid,email,displayName,role,subject,school_id')
+      .select('uid,email,displayname,role,subject,school_id')
       .single();
 
     if (updateError) {
@@ -252,7 +252,7 @@ app.post('/api/users/create', async (req, res) => {
       // Não falha - continua sem school_id
     }
 
-    res.json(userData || { uid, email, displayName, role, school_id: finalSchoolId });
+    res.json(userData || { uid, email, displayname: displayName, role, school_id: finalSchoolId });
   } catch (err) {
     console.error('[CREATE_USER] Error:', err);
     res.status(500).json({ error: 'Erro ao criar usuário' });
@@ -308,7 +308,7 @@ app.get('/api/teachers', async (_req, res) => {
 });
 
 app.get('/api/users', async (req, res) => {
-  let query = supabase.from('users').select('*').order('displayName', { ascending: true });
+  let query = supabase.from('users').select('*').order('displayname', { ascending: true });
   if (req.query.schoolId) {
     query = query.eq('school_id', req.query.schoolId);
   }
@@ -345,7 +345,7 @@ app.patch('/api/users/:uid/role', async (req, res) => {
     .from('users')
     .update({ role })
     .eq('uid', req.params.uid)
-    .select('uid,email,displayName,role,subject')
+    .select('uid,email,displayname,role,subject')
     .single();
 
   if (error) return res.status(500).json({ error: 'Erro ao atualizar perfil do usuário' });
