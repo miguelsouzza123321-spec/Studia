@@ -260,9 +260,9 @@ app.post('/api/users/create', async (req, res) => {
 });
 
 app.get('/api/schedules', async (req, res) => {
-  let query = supabase.from('schedules').select('*').order('date', { ascending: false }).order('startTime', { ascending: true });
+  let query = supabase.from('schedules').select('*').order('date', { ascending: false }).order('starttime', { ascending: true });
   if (req.query.teacherId) {
-    query = query.eq('teacherId', req.query.teacherId);
+    query = query.eq('teacherid', req.query.teacherId);
   } else if (req.query.schoolId) {
     query = query.eq('school_id', req.query.schoolId);
   }
@@ -272,8 +272,19 @@ app.get('/api/schedules', async (req, res) => {
 });
 
 app.post('/api/schedules', async (req, res) => {
-  const { date, startTime, endTime, subject, room, teacherId, teacherName, classGroup } = req.body;
-  const { data, error } = await supabase.from('schedules').insert({ date, startTime, endTime, subject, room, teacherId, teacherName, classGroup, status: 'pending' }).select('id').single();
+  const { date, startTime, endTime, subject, room, teacherId, teacherName, classGroup, school_id } = req.body;
+  const { data, error } = await supabase.from('schedules').insert({
+    date,
+    starttime: startTime,
+    endtime: endTime,
+    subject,
+    room,
+    teacherid: teacherId,
+    teachername: teacherName,
+    classgroup: classGroup,
+    status: 'pending',
+    school_id: school_id || DEFAULT_SCHOOL_ID
+  }).select('id').single();
   if (error) return res.status(500).json({ error: 'Erro ao criar horário' });
   res.json({ id: data.id, status: 'success' });
 });
@@ -283,7 +294,18 @@ app.patch('/api/schedules/:id', async (req, res) => {
   const onlyStatus = status !== undefined && date === undefined && startTime === undefined && endTime === undefined && subject === undefined && room === undefined && teacherId === undefined && teacherName === undefined && classGroup === undefined;
   const updates = onlyStatus
     ? { status, updatedAt: new Date().toISOString() }
-    : { status, date, startTime, endTime, subject, room, teacherId, teacherName, classGroup, updatedAt: new Date().toISOString() };
+    : {
+        status,
+        date,
+        starttime: startTime,
+        endtime: endTime,
+        subject,
+        room,
+        teacherid: teacherId,
+        teachername: teacherName,
+        classgroup: classGroup,
+        updatedAt: new Date().toISOString()
+      };
   const { error } = await supabase.from('schedules').update(updates).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao atualizar horário' });
   res.json({ status: 'success' });
@@ -353,7 +375,7 @@ app.patch('/api/users/:uid/role', async (req, res) => {
 });
 
 app.get('/api/labs/bookings', async (_req, res) => {
-  const { data, error } = await supabase.from('lab_bookings').select('*').order('date', { ascending: false }).order('startTime', { ascending: true });
+  const { data, error } = await supabase.from('lab_bookings').select('*').order('date', { ascending: false }).order('starttime', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar reservas' });
   res.json(data);
 });
@@ -401,7 +423,7 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
   if (!certificate) return res.status(404).json({ error: 'Certificado não encontrado' });
   const { error } = await supabase.from('certificates').update({ status: 'approved' }).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
-  const { error: schedError } = await supabase.from('schedules').update({ status: 'vaga' }).eq('teacherId', certificate.teacherId).eq('date', certificate.date);
+  const { error: schedError } = await supabase.from('schedules').update({ status: 'vaga' }).eq('teacherid', certificate.teacherId).eq('date', certificate.date);
   if (schedError) return res.status(500).json({ error: 'Erro ao atualizar status dos horários' });
   res.json({ status: 'success' });
 });
