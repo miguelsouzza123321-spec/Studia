@@ -40,15 +40,15 @@ const showDialog = (message, { confirm = false, title = 'Studia' } = {}) => new 
   const overlay = document.createElement('div');
   overlay.style.cssText = 'position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,23,42,.55);backdrop-filter:blur(5px);font-family:system-ui,sans-serif;';
   overlay.innerHTML = `
-    <div style="width:min(100%,440px);background:#fff;border:1px solid #e2e8f0;border-radius:24px;box-shadow:0 24px 60px rgba(15,23,42,.25);padding:28px;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;color:#1d4ed8;">
-        <div style="width:38px;height:38px;border-radius:12px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-weight:900;">S</div>
+    <div style="width:min(100%,440px);background:#fff;border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 24px 60px rgba(15,23,42,.25);padding:28px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;color:#2563eb;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#eff6ff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:16px;">S</div>
         <h3 style="margin:0;color:#0f172a;font-size:18px;font-weight:800;">${title}</h3>
       </div>
       <p data-dialog-message style="margin:0;color:#475569;font-size:14px;line-height:1.6;white-space:pre-line;"></p>
-      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:24px;">
-        ${confirm ? '<button data-dialog-cancel type="button" style="border:1px solid #e2e8f0;background:#fff;color:#475569;border-radius:12px;padding:11px 18px;font-weight:700;cursor:pointer;">Cancelar</button>' : ''}
-        <button data-dialog-ok type="button" style="border:0;background:#2563eb;color:#fff;border-radius:12px;padding:11px 20px;font-weight:700;cursor:pointer;">${confirm ? 'Confirmar' : 'Entendi'}</button>
+      <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:24px;">
+        ${confirm ? '<button data-dialog-cancel type="button" style="border:1px solid #e2e8f0;background:#fff;color:#475569;border-radius:10px;padding:11px 20px;font-weight:700;cursor:pointer;transition:all 0.2s;font-size:14px;">Cancelar</button>' : ''}
+        <button data-dialog-ok type="button" style="border:0;background:#2563eb;color:#fff;border-radius:10px;padding:11px 22px;font-weight:700;cursor:pointer;transition:all 0.2s;font-size:14px;box-shadow:0 4px 12px rgba(37,99,235,0.25);">${confirm ? 'Confirmar' : 'Entendi'}</button>
       </div>
     </div>`;
   overlay.querySelector('[data-dialog-message]').textContent = message;
@@ -158,12 +158,12 @@ function showApiConfigModal(explanation = '') {
 
       <div style="display: flex; flex-direction: column; gap: 8px;">
         <label style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">URL do Servidor (API Base URL)</label>
-        <input 
-          type="text" 
-          id="api-config-input" 
-          placeholder="https://sua-api.run.app" 
+        <input
+          type="text"
+          id="api-config-input"
+          placeholder="https://sua-api.run.app"
           value="${localStorage.getItem('api_base_url') || ''}"
-          style="width: 100%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px 16px; font-size: 0.875rem; font-weight: 500; outline: none; box-sizing: border-box;"
+          style="width: 100%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.875rem; font-weight: 500; outline: none; box-sizing: border-box; transition: all 0.2s;"
         />
         <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">
           Insira a URL do seu app no Cloud Run (ex: <code>https://ais-pre-...run.app</code>).
@@ -173,17 +173,21 @@ function showApiConfigModal(explanation = '') {
       <div id="api-config-status" style="font-size: 0.75rem; font-weight: 600; display: none;"></div>
 
       <div style="display: flex; gap: 12px;">
-        <button 
+        <button
           id="api-config-test"
           type="button"
-          style="flex: 1; background-color: #f1f5f9; hover:background-color: #e2e8f0; border: none; border-radius: 12px; padding: 12px; font-size: 0.875rem; font-weight: 700; color: #334155; cursor: pointer; transition: all 0.2s;"
+          style="flex: 1; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 11px; font-size: 0.875rem; font-weight: 700; color: #334155; cursor: pointer; transition: all 0.2s;"
+          onmouseover="this.style.backgroundColor='#e2e8f0'"
+          onmouseout="this.style.backgroundColor='#f1f5f9'"
         >
           Testar
         </button>
-        <button 
+        <button
           id="api-config-save"
           type="button"
-          style="flex: 1; background-color: #2563eb; hover:background-color: #1d4ed8; border: none; border-radius: 12px; padding: 12px; font-size: 0.875rem; font-weight: 700; color: #ffffff; cursor: pointer; transition: all 0.2s; box-shadow: 0 10px 15px -3px rgba(37,99,235,0.2);"
+          style="flex: 1; background-color: #2563eb; border: none; border-radius: 10px; padding: 11px; font-size: 0.875rem; font-weight: 700; color: #ffffff; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
+          onmouseover="this.style.backgroundColor='#1d4ed8'"
+          onmouseout="this.style.backgroundColor='#2563eb'"
         >
           Salvar e Fechar
         </button>
@@ -627,7 +631,7 @@ const LandingView = () => `
       <div class="flex items-center">
         ${Logo(150, 40)}
       </div>
-      <button onclick="actions.showLoginModal('login')" class="landing-nav-button px-5 py-2.5 rounded-xl font-bold text-sm transition-all">
+      <button onclick="actions.showLoginModal('login')" class="landing-nav-button px-5 py-2.5 rounded-lg font-bold text-sm transition-all">
         Entrar no Sistema
       </button>
     </nav>
@@ -744,7 +748,7 @@ const LandingView = () => `
     <!-- Login/Register Modal -->
     <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 ${authMode === 'closed' ? 'hidden' : ''}">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideLoginModal()"></div>
-      <div class="bg-white w-full max-w-md rounded-3xl p-8 relative z-10 shadow-2xl">
+      <div class="bg-white w-full max-w-md rounded-2xl p-8 relative z-10 shadow-2xl border border-slate-200">
         <div class="flex justify-center mb-6">
           ${Logo(160, 44)}
         </div>
@@ -758,13 +762,13 @@ const LandingView = () => `
         
         <div class="space-y-4">
           ${authMode === 'register' ? `
-            <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-            <input type="text" id="auth-subject" placeholder="Sua Matéria (ex: Português)" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+            <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm">
+            <input type="text" id="auth-subject" placeholder="Sua Matéria (ex: Português)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm">
           ` : ''}
-          <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-          <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-          
-          <button onclick="${authMode === 'login' ? 'actions.login()' : 'actions.register()'}" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-xl font-bold shadow-lg shadow-blue-500/10 mt-2 transition-all">
+          <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm">
+          <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm">
+
+          <button onclick="${authMode === 'login' ? 'actions.login()' : 'actions.register()'}" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md shadow-blue-500/15 mt-2 transition-all">
             ${authMode === 'login' ? 'Entrar' : 'Cadastrar'}
           </button>
         </div>
@@ -812,16 +816,16 @@ const TeacherView = () => {
         </div>
         <div class="flex gap-2">
           ${currentTab === 'atestados' ? `
-            <button onclick="actions.showCertModal()" class="bg-blue-600 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-md transition-all hover:bg-blue-700" id="btn-new-cert">
+            <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-md transition-all" id="btn-new-cert">
                 <i data-lucide="file-plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo <span class="hidden sm:inline">Atestado</span></span>
             </button>
           ` : ''}
           ${currentTab === 'labs' ? `
-            <button onclick="actions.showLabModal()" class="bg-blue-600 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-md transition-all hover:bg-blue-700" id="btn-teacher-lab-new">
+            <button onclick="actions.showLabModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-md transition-all" id="btn-teacher-lab-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
             </button>
           ` : ''}
-          <button onclick="actions.refreshSchedules()" class="bg-blue-50 text-blue-600 px-3 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm transition-all hover:bg-blue-50" id="btn-refresh-teacher-schedules">
+          <button onclick="actions.refreshSchedules()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm transition-all" id="btn-refresh-teacher-schedules">
             <i data-lucide="refresh-cw" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Atualizar</span>
           </button>
         </div>
@@ -831,7 +835,7 @@ const TeacherView = () => {
         ${currentTab === 'horarios' ? `
           <!-- Switch between sub-tabs with counts -->
           <div class="flex gap-2 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit mb-6 print:hidden overflow-x-auto scrollbar-none select-none shrink-0">
-            <button onclick="actions.setTeacherSchedulesTab('grid')" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+            <button onclick="actions.setTeacherSchedulesTab('grid')" class="px-5 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
               teacherSchedulesTab === 'grid' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
             }">
               <i data-lucide="grid-3x3" class="w-4 h-4 text-slate-500"></i> Grade de Horários Completa
@@ -844,17 +848,17 @@ const TeacherView = () => {
               <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="space-y-1">
                   <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Turno / Períodos</label>
-                  <select onchange="actions.setReportTurno(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500">
+                  <select onchange="actions.setReportTurno(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="matutino" ${reportTurno === 'matutino' ? 'selected' : ''}>Manhã (07:30 - 11:45)</option>
                     <option value="vespertino" ${reportTurno === 'vespertino' ? 'selected' : ''}>Tarde (13:00 - 17:15)</option>
                     <option value="noturno" ${reportTurno === 'noturno' ? 'selected' : ''}>Noite (18:45 - 22:45)</option>
                     <option value="auto" ${reportTurno === 'auto' ? 'selected' : ''}>Auto-detecção</option>
                   </select>
                 </div>
-                
+
                 <div class="space-y-1">
                   <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Tamanho da Grade</label>
-                  <select onchange="actions.setReportCardSize(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500">
+                  <select onchange="actions.setReportCardSize(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                     <option value="small" ${reportCardSize === 'small' ? 'selected' : ''}>Pequeno (Compacto)</option>
                     <option value="medium" ${reportCardSize === 'medium' ? 'selected' : ''}>Médio (Recomendado)</option>
                     <option value="large" ${reportCardSize === 'large' ? 'selected' : ''}>Grande</option>
@@ -865,7 +869,7 @@ const TeacherView = () => {
 
                 <div class="space-y-1">
                   <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Opções Rápidas</label>
-                  <button id="btn-download-pdf-teacher" onclick="actions.downloadTeacherPDF()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center justify-center gap-1.5 hover:bg-blue-700 transition-all">
+                  <button id="btn-download-pdf-teacher" onclick="actions.downloadTeacherPDF()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold text-sm shadow-md flex items-center justify-center gap-1.5 transition-all">
                     <i data-lucide="download" class="w-4 h-4"></i> Baixar PDF
                   </button>
                 </div>
@@ -951,12 +955,12 @@ const TeacherView = () => {
                 <h3 class="text-xl md:text-2xl font-black text-slate-900">Seus Atestados Médicos</h3>
                 <p class="text-xs text-slate-500 font-bold">Acompanhe seus atestados enviados e o status de homologação.</p>
               </div>
-              <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+              <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
                 <i data-lucide="plus" class="w-4 h-4"></i> Enviar Novo Atestado
               </button>
             </div>
             
-            <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
               <div class="overflow-x-auto pr-2">
                 <table class="w-full text-left min-w-[700px]">
                   <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
@@ -1025,24 +1029,24 @@ const CreateModal = () => `
       <h3 class="text-2xl font-bold mb-8">Novo Agendamento</h3>
       <form onsubmit="actions.createSchedule(event)" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
-          <input type="text" id="form-subject" placeholder="Matéria" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
-          <input type="text" id="form-class-group" placeholder="Turma (ex: 9A, 3BI)" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+          <input type="text" id="form-subject" placeholder="Matéria" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+          <input type="text" id="form-class-group" placeholder="Turma (ex: 9A, 3BI)" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <input type="date" id="form-date" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
-          <input type="text" id="form-room" placeholder="Sala" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+          <input type="date" id="form-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+          <input type="text" id="form-room" placeholder="Sala" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <input type="time" id="form-start" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" value="18:45" required>
-          <input type="time" id="form-end" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" value="22:45" required>
+          <input type="time" id="form-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" value="18:45" required>
+          <input type="time" id="form-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" value="22:45" required>
         </div>
-        <select id="form-teacher" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+        <select id="form-teacher" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           <option value="">Selecione o Professor</option>
           ${teachers.map(t => `<option value="${t.uid}">${t.displayName}</option>`).join('')}
         </select>
         <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideCreateModal()" class="flex-1 py-3 border rounded-xl font-bold hover:bg-slate-50">Cancelar</button>
-          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg">Criar Horário</button>
+          <button type="button" onclick="actions.hideCreateModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Criar Horário</button>
         </div>
       </form>
     </div>
@@ -1058,44 +1062,44 @@ const EditModal = () => `
         <input type="hidden" id="edit-form-id">
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Matéria</label>
-            <input type="text" id="edit-form-subject" placeholder="Matéria" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Matéria</label>
+            <input type="text" id="edit-form-subject" placeholder="Matéria" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           </div>
           <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Turma</label>
-            <input type="text" id="edit-form-class-group" placeholder="Turma (ex: 9A, 3BI)" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data</label>
-            <input type="date" id="edit-form-date" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
-          </div>
-          <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Sala / Local</label>
-            <input type="text" id="edit-form-room" placeholder="Sala" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Turma</label>
+            <input type="text" id="edit-form-class-group" placeholder="Turma (ex: 9A, 3BI)" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Hora Início</label>
-            <input type="time" id="edit-form-start" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Data</label>
+            <input type="date" id="edit-form-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           </div>
           <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Hora Término</label>
-            <input type="time" id="edit-form-end" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Sala / Local</label>
+            <input type="text" id="edit-form-room" placeholder="Sala" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Hora Início</label>
+            <input type="time" id="edit-form-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Hora Término</label>
+            <input type="time" id="edit-form-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           </div>
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Professor</label>
-          <select id="edit-form-teacher" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold text-sm" required>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Professor</label>
+          <select id="edit-form-teacher" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
             <option value="">Selecione o Professor</option>
             ${teachers.map(t => `<option value="${t.uid}">${t.displayName}</option>`).join('')}
           </select>
         </div>
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Status</label>
-          <select id="edit-form-status" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold text-sm" required>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Status</label>
+          <select id="edit-form-status" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
             <option value="pending">Pendente</option>
             <option value="confirmed">Confirmado</option>
             <option value="absent">Falta / Ausente</option>
@@ -1103,8 +1107,8 @@ const EditModal = () => `
           </select>
         </div>
         <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideEditModal()" class="flex-1 py-3 border rounded-xl font-bold hover:bg-slate-50 text-slate-700">Cancelar</button>
-          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold shadow-lg shadow-blue-600/10 hover:bg-blue-700 transition-all">Salvar</button>
+          <button type="button" onclick="actions.hideEditModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Salvar</button>
         </div>
       </form>
     </div>
@@ -1137,18 +1141,18 @@ const LabModal = () => `
     <div class="bg-white w-full max-w-lg rounded-3xl p-8 relative z-10 shadow-2xl">
       <h3 class="text-2xl font-bold mb-8">Reservar Laboratório</h3>
       <form onsubmit="actions.createLabBooking(event)" class="space-y-4">
-        <select id="lab-type" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+        <select id="lab-type" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
           <option value="info">Informática</option>
           <option value="chem">Química</option>
         </select>
-        <input type="date" id="lab-date" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+        <input type="date" id="lab-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         <div class="grid grid-cols-2 gap-4">
-          <input type="time" id="lab-start" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
-          <input type="time" id="lab-end" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
+          <input type="time" id="lab-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+          <input type="time" id="lab-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
         <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideLabModal()" class="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
-          <button type="submit" class="flex-1 bg-slate-900 text-white py-3 rounded-xl font-bold">Reservar</button>
+          <button type="button" onclick="actions.hideLabModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Reservar</button>
         </div>
       </form>
     </div>
@@ -1162,29 +1166,29 @@ const CertModal = () => `
       <h3 class="text-2xl font-bold mb-8">Incluir Atestado Médico</h3>
       <form onsubmit="actions.submitCert(event)" class="space-y-4">
         <p class="text-xs text-slate-500 font-bold uppercase mb-2">Atenção: Ao aprovar este atestado, as aulas do dia serão marcadas automaticamente como "Aulas Vagas".</p>
-        <input type="date" id="cert-date" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold" required>
-        <textarea id="cert-reason" placeholder="Motivo da ausência" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold min-h-[100px]" required></textarea>
-        
+        <input type="date" id="cert-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
+        <textarea id="cert-reason" placeholder="Motivo da ausência" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[100px]" required></textarea>
+
         <div class="space-y-2">
             <label class="text-[10px] font-black text-slate-400 uppercase">Anexar Foto do Atestado</label>
             <div class="relative group">
                 <input type="file" id="cert-image" accept="image/*" capture="environment" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" onchange="actions.previewCertImage(event)">
-                <div id="cert-upload-placeholder" class="w-full border-2 border-dashed border-slate-200 rounded-2xl p-8 flex flex-col items-center justify-center gap-2 group-hover:border-blue-400 transition-all">
+                <div id="cert-upload-placeholder" class="w-full border-2 border-dashed border-slate-200 rounded-lg p-8 flex flex-col items-center justify-center gap-2 group-hover:border-blue-400 transition-all">
                     <i data-lucide="camera" class="text-slate-400 group-hover:text-blue-600 transition-all"></i>
                     <p class="text-sm font-bold text-slate-500">Toque para tirar foto ou selecionar</p>
                 </div>
             </div>
-            <div id="cert-preview-container" class="hidden relative mt-4 border border-slate-200 rounded-2xl overflow-hidden bg-slate-50 p-2">
-                <img id="cert-preview-img" class="w-full max-h-64 object-contain rounded-xl mx-auto" />
-                <button type="button" onclick="actions.clearCertImage()" class="absolute top-4 right-4 bg-rose-600 text-white p-2 rounded-full hover:bg-rose-700 shadow-lg transition-all flex items-center justify-center" title="Remover Imagem">
+            <div id="cert-preview-container" class="hidden relative mt-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-2">
+                <img id="cert-preview-img" class="w-full max-h-64 object-contain rounded-lg mx-auto" />
+                <button type="button" onclick="actions.clearCertImage()" class="absolute top-4 right-4 bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-lg shadow-lg transition-all flex items-center justify-center" title="Remover Imagem">
                     <i data-lucide="trash-2" class="w-4 h-4"></i>
                 </button>
             </div>
         </div>
 
         <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideCertModal()" class="flex-1 py-3 border rounded-xl font-bold">Cancelar</button>
-          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold">Enviar</button>
+          <button type="button" onclick="actions.hideCertModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Enviar</button>
         </div>
       </form>
     </div>
@@ -1194,16 +1198,16 @@ const CertModal = () => `
 const CreateEscolaModal = () => `
   <div id="create-escola-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideCreateEscolaModal()"></div>
-    <div class="bg-white w-full max-w-md rounded-3xl p-8 relative z-10 shadow-2xl">
+    <div class="bg-white w-full max-w-md rounded-2xl p-8 relative z-10 shadow-2xl border border-slate-200">
       <h3 class="text-2xl font-bold mb-6">Criar Nova Escola</h3>
       <form onsubmit="actions.createSchool(event)" class="space-y-4">
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Nome da Escola</label>
-          <input type="text" id="escola-name" placeholder="Ex: Colégio Estadual..." class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+          <input type="text" id="escola-name" placeholder="Ex: Colégio Estadual..." class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
         <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideCreateEscolaModal()" class="flex-1 py-3 border rounded-xl font-bold hover:bg-slate-50">Cancelar</button>
-          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">Criar</button>
+          <button type="button" onclick="actions.hideCreateEscolaModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Criar</button>
         </div>
       </form>
     </div>
@@ -1213,28 +1217,28 @@ const CreateEscolaModal = () => `
 const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
   <div id="create-user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideCreateUserModal()"></div>
-    <div class="bg-white w-full max-w-md rounded-3xl p-8 relative z-10 shadow-2xl">
+    <div class="bg-white w-full max-w-md rounded-2xl p-8 relative z-10 shadow-2xl border border-slate-200">
       <h3 class="text-2xl font-bold mb-6">Criar Novo Usuário</h3>
       <form onsubmit="actions.createUser(event)" class="space-y-4">
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Nome</label>
-          <input type="text" id="user-displayname" placeholder="Ex: João Silva" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+          <input type="text" id="user-displayname" placeholder="Ex: João Silva" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">E-mail</label>
-          <input type="email" id="user-email" placeholder="Ex: joao@example.com" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+          <input type="email" id="user-email" placeholder="Ex: joao@example.com" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
         </div>
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Senha</label>
-          <input type="password" id="user-password" placeholder="Mínimo 8 caracteres" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required minlength="8">
+          <input type="password" id="user-password" placeholder="Mínimo 8 caracteres" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required minlength="8">
         </div>
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Matéria</label>
-          <input type="text" id="user-subject" placeholder="Ex: Matemática" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40">
+          <input type="text" id="user-subject" placeholder="Ex: Matemática" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
         </div>
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Cargo</label>
-          <select id="user-role" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+          <select id="user-role" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" required>
             ${viewerRole === 'admin'
               ? `
                 <option value="">Selecione um cargo</option>
@@ -1251,8 +1255,8 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
           </select>
         </div>
         <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideCreateUserModal()" class="flex-1 py-3 border rounded-xl font-bold hover:bg-slate-50">Cancelar</button>
-          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">Criar</button>
+          <button type="button" onclick="actions.hideCreateUserModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Criar</button>
         </div>
       </form>
     </div>
@@ -1481,12 +1485,12 @@ const AdminView = () => `
         </div>
         <div class="flex items-center gap-2">
           ${currentTab === 'horarios' ? `
-            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-xl font-bold shadow-md shadow-blue-900/10 flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-admin-new">
+            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-admin-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo Horário</span>
             </button>
           ` : ''}
           ${currentTab === 'labs' ? `
-            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-xl font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-admin-lab-new">
+            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-admin-lab-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
             </button>
           ` : ''}
@@ -1532,12 +1536,12 @@ const DiretorView = () => `
         </div>
         <div class="flex gap-2">
           ${currentTab === 'horarios' ? `
-            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-xl font-bold shadow-md shadow-blue-900/10 flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-admin-new">
+            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-admin-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo Horário</span>
             </button>
           ` : ''}
           ${currentTab === 'labs' ? `
-            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-xl font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-admin-lab-new">
+            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-admin-lab-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
             </button>
           ` : ''}
@@ -1585,7 +1589,7 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
         </div>
         <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           ${(viewerRole === 'admin' || viewerRole === 'diretor') ? `
-            <button onclick="actions.showCreateUserModal('${viewerRole}')" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+            <button onclick="actions.showCreateUserModal('${viewerRole}')" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
               <i data-lucide="plus" class="w-4 h-4"></i> Criar Usuário
             </button>
           ` : ''}
@@ -1668,12 +1672,12 @@ const EscolasTab = () => `
         <h3 class="text-xl md:text-2xl font-black text-slate-900">Gerenciar Escolas</h3>
         <p class="text-xs md:text-sm text-slate-500 font-bold">Crie escolas e associe diretores</p>
       </div>
-      <button onclick="actions.showCreateEscolaModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+      <button onclick="actions.showCreateEscolaModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
         <i data-lucide="plus" class="w-4 h-4"></i> Nova Escola
       </button>
     </div>
 
-    <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="overflow-x-auto pr-2">
         <table class="w-full text-left min-w-[500px]">
           <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
@@ -1771,7 +1775,7 @@ const LabsTab = () => `
         <h3 class="text-xl md:text-2xl font-black text-slate-900">Agendamento de Laboratórios</h3>
         <p class="text-xs md:text-sm text-slate-500 font-bold font-sans">Consulte a disponibilidade e reserve os laboratórios do colégio para as suas aulas.</p>
       </div>
-      <button onclick="actions.showLabModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+      <button onclick="actions.showLabModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
         <i data-lucide="plus" class="w-4 h-4"></i> Reservar Laboratório
       </button>
     </div>
@@ -1814,7 +1818,7 @@ const LabsTab = () => `
           </button>
         ` : ''}
       </div>
-      <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto pr-2">
           <table class="w-full text-left min-w-[700px]">
             <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
@@ -1868,11 +1872,11 @@ const AtestadosTab = () => `
   <div class="space-y-8">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <h3 class="text-xl md:text-2xl font-black text-slate-900">Atestados Médicos</h3>
-      <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+      <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
         <i data-lucide="plus" class="w-4 h-4"></i> Incluir Atestado Médico
       </button>
     </div>
-    <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
       <div class="overflow-x-auto pr-2">
         <table class="w-full text-left min-w-[700px]">
           <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
@@ -1973,12 +1977,12 @@ const RelatoriosTab = () => {
 
   const subTabHeader = `
     <div class="flex gap-2 bg-slate-100 p-1.5 rounded-2xl w-full sm:w-fit mb-8 print:hidden overflow-x-auto scrollbar-none select-none shrink-0">
-      <button onclick="actions.setRelatorioSubTab('urania')" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+      <button onclick="actions.setRelatorioSubTab('urania')" class="px-5 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
         currentRelatorioSubTab === 'urania' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
       }">
         <i data-lucide="grid-3x3" class="w-4 h-4 text-slate-500"></i> Grade de Professores (Individual)
       </button>
-      <button onclick="actions.setRelatorioSubTab('frequent')" class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+      <button onclick="actions.setRelatorioSubTab('frequent')" class="px-5 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
         currentRelatorioSubTab === 'frequent' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-800'
       }">
         <i data-lucide="bar-chart-3" class="w-4 h-4 text-slate-500"></i> Gráfico de Frequência
@@ -2016,7 +2020,7 @@ const RelatoriosTab = () => {
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <!-- Button 1: Download Direct PDF with html2pdf -->
-          <button id="btn-download-pdf" onclick="actions.downloadPDF()" class="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg flex items-center gap-2 hover:bg-blue-700 transition-all">
+          <button id="btn-download-pdf" onclick="actions.downloadPDF()" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-md flex items-center gap-2 transition-all">
             <i data-lucide="download"></i> Baixar Arquivo PDF
           </button>
         </div>
@@ -2044,24 +2048,24 @@ const RelatoriosTab = () => {
       </div>
 
       <!-- Control Box -->
-      <div class="bg-white p-6 rounded-3xl border shadow-sm space-y-4 print:hidden">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4 print:hidden">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div class="space-y-1">
+          <div class="space-y-2">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Nome do Colégio</label>
-            <input type="text" value="${schoolName}" oninput="actions.setSchoolName(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-semibold text-sm focus:ring-2 focus:ring-blue-500">
+            <input type="text" value="${schoolName}" oninput="actions.setSchoolName(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
           </div>
-          
-          <div class="space-y-1">
+
+          <div class="space-y-2">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Selecione a Semana</label>
-            <select onchange="actions.setReportWeek(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500">
+            <select onchange="actions.setReportWeek(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all" ${reportWeek === 'all' ? 'selected' : ''}>Todas as semanas (Geral Acumulada)</option>
               ${weeks.map(w => `<option value="${w}" ${reportWeek === w ? 'selected' : ''}>${getWeekRangeLabel(w)}</option>`).join('')}
             </select>
           </div>
 
-          <div class="space-y-1">
+          <div class="space-y-2">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Turno / Períodos</label>
-            <select onchange="actions.setReportTurno(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500">
+            <select onchange="actions.setReportTurno(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="matutino" ${reportTurno === 'matutino' ? 'selected' : ''}>Manhã (07:30 - 11:45)</option>
               <option value="vespertino" ${reportTurno === 'vespertino' ? 'selected' : ''}>Tarde (13:00 - 17:15)</option>
               <option value="noturno" ${reportTurno === 'noturno' ? 'selected' : ''}>Noite (18:45 - 22:45)</option>
@@ -2069,17 +2073,17 @@ const RelatoriosTab = () => {
             </select>
           </div>
 
-          <div class="space-y-1">
+          <div class="space-y-2">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Filtro de Professor</label>
-            <select onchange="actions.setReportTeacher(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500">
+            <select onchange="actions.setReportTeacher(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="all" ${reportTeacher === 'all' ? 'selected' : ''}>Todos os professores (${displayTeachers.length})</option>
               ${teachers.map(t => `<option value="${t.uid}" ${reportTeacher === t.uid ? 'selected' : ''}>${t.displayName}</option>`).join('')}
             </select>
           </div>
 
-          <div class="space-y-1">
+          <div class="space-y-2">
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Tamanho dos Cards</label>
-            <select onchange="actions.setReportCardSize(this.value)" class="w-full bg-slate-50 border rounded-xl px-4 py-2.5 outline-none font-bold text-sm focus:ring-2 focus:ring-blue-500 tracking-wide">
+            <select onchange="actions.setReportCardSize(this.value)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
               <option value="small" ${reportCardSize === 'small' ? 'selected' : ''}>Pequeno (Compacto)</option>
               <option value="medium" ${reportCardSize === 'medium' ? 'selected' : ''}>Médio (Recomendado)</option>
               <option value="large" ${reportCardSize === 'large' ? 'selected' : ''}>Grande (Mais Legível)</option>
