@@ -1,0 +1,4 @@
+# Supabase local config
+
+[env.local]
+project_id = "klktkcuuhxhlxgthkrsy"

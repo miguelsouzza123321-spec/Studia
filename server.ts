@@ -34,7 +34,7 @@ app.use(express.json({ limit: '10mb' }));
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { email, password, displayName, subject } = req.body;
+    const { email, password, displayName, subject, school_id, role } = req.body;
 
     // Validação de campos obrigatórios
     if (!email || !password || !displayName) {
@@ -45,7 +45,7 @@ app.post('/api/auth/register', async (req, res) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { displayName, role: 'teacher', subject },
+      user_metadata: { displayName, role: role || 'teacher', subject },
     });
 
     if (authError || !authData.user) {
@@ -56,10 +56,11 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const uid = authData.user.id;
+    const finalRole = role || 'teacher';
     const { data, error } = await supabase
       .from('users')
-      .insert({ uid, email, displayName, role: 'teacher', subject: subject || null })
-      .select('uid,email,displayName,role,subject')
+      .insert({ uid, email, displayName, role: finalRole, subject: subject || null, school_id: school_id || null })
+      .select('uid,email,displayName,role,subject,school_id')
       .single();
 
     if (error) {
@@ -78,7 +79,7 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
   if (authError || !authData.user) return res.status(401).json({ error: 'Credenciais inválidas' });
-  const { data, error } = await supabase.from('users').select('*').eq('uid', authData.user.id).maybeSingle();
+  const { data, error } = await supabase.from('users').select('uid,email,displayName,role,subject,school_id').eq('uid', authData.user.id).maybeSingle();
   if (error) return res.status(500).json({ error: 'Erro ao realizar login' });
   if (!data) return res.status(401).json({ error: 'Credenciais inválidas' });
   res.json(data);
@@ -86,7 +87,11 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.get('/api/schedules', async (req, res) => {
   let query = supabase.from('schedules').select('*').order('date', { ascending: false }).order('startTime', { ascending: true });
-  if (req.query.teacherId) query = query.eq('teacherId', req.query.teacherId);
+  if (req.query.teacherId) {
+    query = query.eq('teacherId', req.query.teacherId);
+  } else if (req.query.schoolId) {
+    query = query.eq('school_id', req.query.schoolId);
+  }
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar horários' });
   res.json(data);
@@ -128,8 +133,12 @@ app.get('/api/teachers', async (_req, res) => {
   res.json(data);
 });
 
-app.get('/api/users', async (_req, res) => {
-  const { data, error } = await supabase.from('users').select('*').order('displayName', { ascending: true });
+app.get('/api/users', async (req, res) => {
+  let query = supabase.from('users').select('*').order('displayName', { ascending: true });
+  if (req.query.schoolId) {
+    query = query.eq('school_id', req.query.schoolId);
+  }
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar usuários' });
   res.json(data);
 });
@@ -220,6 +229,36 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
   if (error) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
   const { error: schedError } = await supabase.from('schedules').update({ status: 'vaga' }).eq('teacherId', certificate.teacherId).eq('date', certificate.date);
   if (schedError) return res.status(500).json({ error: 'Erro ao atualizar status dos horários' });
+  res.json({ status: 'success' });
+});
+
+// ========== SCHOOLS (Multi-tenant) ==========
+
+app.get('/api/schools', async (_req, res) => {
+  const { data, error } = await supabase.from('schools').select('*').order('name', { ascending: true });
+  if (error) return res.status(500).json({ error: 'Erro ao buscar escolas' });
+  res.json(data);
+});
+
+app.post('/api/schools', async (req, res) => {
+  const { name, createdBy } = req.body;
+  if (!name) return res.status(400).json({ error: 'Nome da escola é obrigatório' });
+  const { data, error } = await supabase.from('schools').insert({ name, createdBy }).select('*').single();
+  if (error) return res.status(500).json({ error: `Erro ao criar escola: ${error.message}` });
+  res.json(data);
+});
+
+app.patch('/api/schools/:id', async (req, res) => {
+  const { name } = req.body;
+  if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
+  const { data, error } = await supabase.from('schools').update({ name }).eq('id', req.params.id).select('*').single();
+  if (error) return res.status(500).json({ error: 'Erro ao atualizar escola' });
+  res.json(data);
+});
+
+app.delete('/api/schools/:id', async (req, res) => {
+  const { error } = await supabase.from('schools').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: 'Erro ao deletar escola' });
   res.json({ status: 'success' });
 });
 
