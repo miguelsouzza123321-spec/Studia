@@ -7,6 +7,7 @@ import path from 'path';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
+const DEFAULT_SCHOOL_ID = '7a3d7eee-0b7c-46d5-885f-e62dc1191ca0';
 
 if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseAnonKey) {
   throw new Error('Configure SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY no ambiente do servidor.');
@@ -15,9 +16,13 @@ if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseAnonKey) {
 // A chave service role fica somente no servidor; o navegador usa a API Express.
 const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: { autoRefreshToken: false, persistSession: false },
+  db: { schema: 'public' },
+  global: { headers: { 'X-Client-Info': 'supabase-js-server' } }
 });
 const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
   auth: { autoRefreshToken: false, persistSession: false },
+  db: { schema: 'public' },
+  global: { headers: { 'X-Client-Info': 'supabase-js-auth' } }
 });
 
 const app = express();
@@ -57,18 +62,53 @@ app.post('/api/auth/register', async (req, res) => {
 
     const uid = authData.user.id;
     const finalRole = role || 'teacher';
-    const { data, error } = await supabase
+    const finalSchoolId = school_id || DEFAULT_SCHOOL_ID;
+
+    console.log('[REGISTER] Step 2: Creating user (without school_id)...');
+
+    // Insert SEM school_id para evitar cache
+    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=*`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseServiceRoleKey,
+        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        uid,
+        email,
+        displayName,
+        role: finalRole,
+        subject: subject || null
+      })
+    });
+
+    const insertText = await insertResponse.text();
+    console.log('[REGISTER] Insert status:', insertResponse.status, 'body:', insertText);
+
+    if (!insertResponse.ok) {
+      console.error('[REGISTER] Insert failed');
+      await supabase.auth.admin.deleteUser(uid);
+      return res.status(500).json({ error: `Erro ao registrar: ${insertText}` });
+    }
+
+    console.log('[REGISTER] Step 3: Updating with school_id via client...');
+    const { data: userData, error: updateError } = await supabase
       .from('users')
-      .insert({ uid, email, displayName, role: finalRole, subject: subject || null, school_id: school_id || null })
+      .update({ school_id: finalSchoolId })
+      .eq('uid', uid)
       .select('uid,email,displayName,role,subject,school_id')
       .single();
 
-    if (error) {
-      console.error('DB error:', error);
-      await supabase.auth.admin.deleteUser(uid);
-      return res.status(500).json({ error: `Erro ao registrar perfil: ${error.message}` });
+    console.log('[REGISTER] Update result:', { userData, updateError });
+
+    if (updateError) {
+      console.error('[REGISTER] Update error:', updateError);
+      return res.status(500).json({ error: `Erro ao atualizar escola: ${updateError.message}` });
     }
-    res.json(data);
+
+    res.json(userData);
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Erro interno ao registrar' });
@@ -79,10 +119,26 @@ app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
   const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
   if (authError || !authData.user) return res.status(401).json({ error: 'Credenciais inválidas' });
-  const { data, error } = await supabase.from('users').select('uid,email,displayName,role,subject,school_id').eq('uid', authData.user.id).maybeSingle();
-  if (error) return res.status(500).json({ error: 'Erro ao realizar login' });
-  if (!data) return res.status(401).json({ error: 'Credenciais inválidas' });
-  res.json(data);
+
+  // Usar fetch com cache-busting
+  const response = await fetch(`${supabaseUrl}/rest/v1/users?uid=eq.${authData.user.id}&select=*`, {
+    headers: {
+      'apikey': supabaseServiceRoleKey,
+      'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache'
+    }
+  });
+
+  if (!response.ok) {
+    console.error('[LOGIN] Fetch failed:', response.status);
+    return res.status(500).json({ error: 'Erro ao realizar login' });
+  }
+
+  const data = await response.json();
+  console.log('[LOGIN] Returned:', data[0]);
+  if (!data || data.length === 0) return res.status(401).json({ error: 'Credenciais inválidas' });
+  res.json(data[0]);
 });
 
 app.get('/api/schedules', async (req, res) => {
