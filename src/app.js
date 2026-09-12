@@ -1465,7 +1465,7 @@ const ADMIN_NAV_ITEMS = [
   { id: 'relatorios', icon: 'bar-chart', label: 'Relatórios' },
 ];
 
-const DIRETOR_NAV_ITEMS = ADMIN_NAV_ITEMS.slice(1);
+const DIRETOR_NAV_ITEMS = ADMIN_NAV_ITEMS.filter(item => item.id !== 'overview' && item.id !== 'escolas');
 
 const AdminView = () => `
   <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
