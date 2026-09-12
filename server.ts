@@ -7,7 +7,7 @@ import path from 'path';
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
-const DEFAULT_SCHOOL_ID = '7a3d7eee-0b7c-46d5-885f-e62dc1191ca0';
+const DEFAULT_SCHOOL_ID = '8aa1d331-e470-4191-85d7-1310bc767a36';
 
 if (!supabaseUrl || !supabaseServiceRoleKey || !supabaseAnonKey) {
   throw new Error('Configure SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY no ambiente do servidor.');
