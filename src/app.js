@@ -321,7 +321,8 @@ const getMondayDateStr = (dateStr) => {
   const date = parseLocalDate(dateStr);
   const day = date.getDay();
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(date.setDate(diff));
+  const monday = new Date(date);
+  monday.setDate(diff);
   const y = monday.getFullYear();
   const m = String(monday.getMonth() + 1).padStart(2, '0');
   const d = String(monday.getDate()).padStart(2, '0');
@@ -371,7 +372,8 @@ const getDetectedTurmas = (filteredSchedules) => {
 };
 
 const getDayOfWeek = (dateObj) => {
-  return dateObj.getDay();
+  const day = dateObj.getDay();
+  return day === 0 ? 7 : day;
 };
 
 const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma') => {
@@ -383,11 +385,11 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
       grid[slot][day] = '------';
     });
   });
-  
+
   weekSchedules.forEach(s => {
     const d = parseLocalDate(s.date);
     const dayNum = getDayOfWeek(d);
-    const dayName = days[dayNum - 1];
+    const dayName = dayNum >= 1 && dayNum <= 5 ? days[dayNum - 1] : null;
     if (dayName && grid[s.startTime]) {
       // Show on the grid if the schedule is confirmed or pending, OR if it's already a vacant slot (vaga) or HAF
       if (s.status !== 'confirmed' && s.status !== 'pending' && s.status !== 'vaga' && s.subject?.toUpperCase() !== 'HAF') {
@@ -2369,13 +2371,14 @@ const actions = {
     if (!user) return;
     try {
       if (user.role === 'admin' || user.role === 'diretor') {
-        const [s, t, u, lb, c] = await Promise.all([
-          api.get('/api/schedules').catch(err => { console.error("Schedules fetch error:", err); return []; }),
-          api.get('/api/teachers').catch(err => { console.error("Teachers fetch error:", err); return []; }),
-          api.get('/api/users').catch(err => { console.error("Users fetch error:", err); return []; }),
-          api.get('/api/labs/bookings').catch(err => { console.error("Lab bookings fetch error:", err); return []; }),
-          api.get('/api/certificates').catch(err => { console.error("Certificates fetch error:", err); return []; })
+        const results = await Promise.allSettled([
+          api.get('/api/schedules'),
+          api.get('/api/teachers'),
+          api.get('/api/users'),
+          api.get('/api/labs/bookings'),
+          api.get('/api/certificates')
         ]);
+        const [s, t, u, lb, c] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = s || [];
         teachers = t || [];
         allUsers = u || [];
@@ -2388,11 +2391,12 @@ const actions = {
         labBookings = lb || [];
         certificates = c || [];
       } else {
-        const [s, lb, c] = await Promise.all([
-          api.get(`/api/schedules?teacherId=${user.uid}`).catch(err => { console.error("Schedules fetch error:", err); return []; }),
-          api.get('/api/labs/bookings').catch(err => { console.error("Lab bookings fetch error:", err); return []; }),
-          api.get('/api/certificates').catch(err => { console.error("Certificates fetch error:", err); return []; })
+        const results = await Promise.allSettled([
+          api.get(`/api/schedules?teacherId=${user.uid}`),
+          api.get('/api/labs/bookings'),
+          api.get('/api/certificates')
         ]);
+        const [s, lb, c] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = s || [];
         allUsers = [];
         labBookings = lb || [];

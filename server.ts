@@ -101,7 +101,7 @@ app.post('/api/schedules', async (req, res) => {
 
 app.patch('/api/schedules/:id', async (req, res) => {
   const { status, date, startTime, endTime, subject, room, teacherId, teacherName, classGroup } = req.body;
-  const onlyStatus = status !== undefined && date === undefined && startTime === undefined && endTime === undefined && subject === undefined && room === undefined && teacherId === undefined;
+  const onlyStatus = status !== undefined && date === undefined && startTime === undefined && endTime === undefined && subject === undefined && room === undefined && teacherId === undefined && teacherName === undefined && classGroup === undefined;
   const updates = onlyStatus
     ? { status, updatedAt: new Date().toISOString() }
     : { status, date, startTime, endTime, subject, room, teacherId, teacherName, classGroup, updatedAt: new Date().toISOString() };
@@ -218,7 +218,8 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
   if (!certificate) return res.status(404).json({ error: 'Certificado não encontrado' });
   const { error } = await supabase.from('certificates').update({ status: 'approved' }).eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
-  await supabase.from('schedules').update({ status: 'vaga' }).eq('teacherId', certificate.teacherId).eq('date', certificate.date);
+  const { error: schedError } = await supabase.from('schedules').update({ status: 'vaga' }).eq('teacherId', certificate.teacherId).eq('date', certificate.date);
+  if (schedError) return res.status(500).json({ error: 'Erro ao atualizar status dos horários' });
   res.json({ status: 'success' });
 });
 
