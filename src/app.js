@@ -73,6 +73,7 @@ try {
 let schedules = [];
 let teachers = [];
 let allUsers = [];
+let schools = [];
 let stats = { total: 0, confirmed: 0, absent: 0, pending: 0 };
 let currentTab = 'horarios';
 let authMode = 'closed'; // 'login', 'register' or 'closed'
@@ -1189,6 +1190,25 @@ const CertModal = () => `
   </div>
 `;
 
+const CreateEscolaModal = () => `
+  <div id="create-escola-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideCreateEscolaModal()"></div>
+    <div class="bg-white w-full max-w-md rounded-3xl p-8 relative z-10 shadow-2xl">
+      <h3 class="text-2xl font-bold mb-6">Criar Nova Escola</h3>
+      <form onsubmit="actions.createSchool(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Nome da Escola</label>
+          <input type="text" id="escola-name" placeholder="Ex: Colégio Estadual..." class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button type="button" onclick="actions.hideCreateEscolaModal()" class="flex-1 py-3 border rounded-xl font-bold hover:bg-slate-50">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">Criar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+`;
+
 const AdminOverviewTab = () => {
   const connected = !!apiBaseUrl;
   const totalSchedules = schedules.length;
@@ -1383,6 +1403,7 @@ const MobileDrawer = ({ theme = 'light', sectionLabel, navItems, profile, drawer
 
 const ADMIN_NAV_ITEMS = [
   { id: 'overview', icon: 'activity', label: 'Visão geral' },
+  { id: 'escolas', icon: 'building', label: 'Escolas' },
   { id: 'horarios', icon: 'calendar', label: 'Horários' },
   { id: 'labs', icon: 'test-tube', label: 'Laboratórios' },
   { id: 'atestados', icon: 'file-text', label: 'Atestados' },
@@ -1425,6 +1446,7 @@ const AdminView = () => `
 
       <div class="p-4 md:p-10 flex-1 overflow-y-auto space-y-6 md:space-y-8 print:p-0">
         ${currentTab === 'overview' ? AdminOverviewTab() : ''}
+        ${currentTab === 'escolas' ? EscolasTab() : ''}
         ${currentTab === 'horarios' ? HorariosTab() : ''}
         ${currentTab === 'labs' ? LabsTab() : ''}
         ${currentTab === 'atestados' ? AtestadosTab() : ''}
@@ -1437,6 +1459,7 @@ const AdminView = () => `
     ${CertModal()}
     ${EditModal()}
     ${DeleteConfirmModal()}
+    ${CreateEscolaModal()}
   </div>
 `;
 
@@ -1578,6 +1601,53 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
     </div>
   `;
 };
+
+const EscolasTab = () => `
+  <div class="space-y-6">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h3 class="text-xl md:text-2xl font-black text-slate-900">Gerenciar Escolas</h3>
+        <p class="text-xs md:text-sm text-slate-500 font-bold">Crie escolas e associe diretores</p>
+      </div>
+      <button onclick="actions.showCreateEscolaModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+        <i data-lucide="plus" class="w-4 h-4"></i> Nova Escola
+      </button>
+    </div>
+
+    <div class="bg-white rounded-3xl border shadow-sm overflow-hidden">
+      <div class="overflow-x-auto pr-2">
+        <table class="w-full text-left min-w-[500px]">
+          <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
+            <tr>
+              <th class="px-8 py-5">Nome da Escola</th>
+              <th class="px-8 py-5">Criado por</th>
+              <th class="px-8 py-5">Data</th>
+              <th class="px-8 py-5">Ações</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-50">
+            ${schools && schools.length > 0 ? schools.map(s => `
+              <tr class="hover:bg-slate-50 transition-all">
+                <td class="px-8 py-5 font-bold">${s.name}</td>
+                <td class="px-8 py-5 text-sm">
+                  ${allUsers.find(u => u.uid === s.createdBy)?.displayName || '—'}
+                </td>
+                <td class="px-8 py-5 text-sm text-slate-500">
+                  ${new Date(s.createdAt).toLocaleDateString('pt-BR')}
+                </td>
+                <td class="px-8 py-5 text-right">
+                  <button onclick="actions.deleteSchool('${s.id}')" class="text-slate-300 hover:text-rose-500 transition-all cursor-pointer" title="Deletar">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </td>
+              </tr>
+            `).join('') : '<tr><td colspan="4" class="px-8 py-8 text-center text-slate-400 text-sm">Nenhuma escola criada ainda</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+`;
 
 const HorariosTab = () => `
   <h3 class="text-2xl font-black text-slate-900 print:mb-4">Grade de Horários</h3>
@@ -2370,11 +2440,33 @@ const actions = {
   async refreshData() {
     if (!user) return;
     try {
-      if (user.role === 'admin' || user.role === 'diretor') {
+      if (user.role === 'admin') {
         const results = await Promise.allSettled([
           api.get('/api/schedules'),
           api.get('/api/teachers'),
           api.get('/api/users'),
+          api.get('/api/labs/bookings'),
+          api.get('/api/certificates'),
+          api.get('/api/schools')
+        ]);
+        const [s, t, u, lb, c, sc] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        schedules = s || [];
+        teachers = t || [];
+        allUsers = u || [];
+        schools = sc || [];
+        stats = {
+          total: schedules.length,
+          confirmed: schedules.filter(item => item.status === 'confirmed').length,
+          absent: schedules.filter(item => item.status === 'absent').length,
+          pending: schedules.filter(item => item.status === 'pending').length,
+        };
+        labBookings = lb || [];
+        certificates = c || [];
+      } else if (user.role === 'diretor') {
+        const results = await Promise.allSettled([
+          api.get(`/api/schedules?schoolId=${user.school_id}`),
+          api.get('/api/teachers'),
+          api.get(`/api/users?schoolId=${user.school_id}`),
           api.get('/api/labs/bookings'),
           api.get('/api/certificates')
         ]);
@@ -2967,6 +3059,47 @@ const actions = {
       }
       showDialog('Houve um erro ao gerar o PDF.');
     });
+  },
+
+  showCreateEscolaModal() {
+    const modal = document.getElementById('create-escola-modal');
+    if (modal) modal.classList.remove('hidden');
+  },
+
+  hideCreateEscolaModal() {
+    const modal = document.getElementById('create-escola-modal');
+    if (modal) modal.classList.add('hidden');
+    document.getElementById('escola-name')?.value && (document.getElementById('escola-name').value = '');
+  },
+
+  async createSchool(event) {
+    if (event) event.preventDefault();
+    const name = document.getElementById('escola-name')?.value;
+    if (!name) return showDialog('Nome da escola é obrigatório.');
+    try {
+      await api.post('/api/schools', { name, createdBy: user.uid });
+      this.hideCreateEscolaModal();
+      await this.refreshData();
+      this.init();
+      showDialog('Escola criada com sucesso!');
+    } catch (err) {
+      showDialog(err.message || 'Erro ao criar escola.');
+    }
+  },
+
+  async deleteSchool(id) {
+    if (!id) return;
+    const escola = schools.find(s => s.id === id);
+    const confirmed = await showDialog(`Deseja excluir a escola "${escola?.name}"? Esta ação não pode ser desfeita.`, { confirm: true, title: 'Excluir escola' });
+    if (!confirmed) return;
+    try {
+      await api.delete(`/api/schools/${id}`);
+      await this.refreshData();
+      this.init();
+      showDialog('Escola excluída com sucesso.');
+    } catch (err) {
+      showDialog(err.message || 'Erro ao excluir escola.');
+    }
   }
 };
 
