@@ -2194,7 +2194,7 @@ const SlidesTab = () => `
 
 // --- ACTIONS ---
 const TAB_ACCESS = {
-  admin: ['overview', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
+  admin: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   diretor: ['horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   teacher: ['horarios', 'labs', 'atestados'],
 };
