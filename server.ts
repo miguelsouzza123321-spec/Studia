@@ -120,25 +120,47 @@ app.post('/api/auth/login', async (req, res) => {
   const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
   if (authError || !authData.user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
-  // Usar fetch com cache-busting
-  const response = await fetch(`${supabaseUrl}/rest/v1/users?uid=eq.${authData.user.id}&select=*`, {
-    headers: {
-      'apikey': supabaseServiceRoleKey,
-      'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache'
+  // Buscar usuário com SQL direto (evita cache do REST API)
+  try {
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('uid,email,displayName,role,subject,school_id')
+      .eq('uid', authData.user.id)
+      .maybeSingle();
+
+    if (userError) {
+      console.log('[LOGIN] Query error (retrying with RPC):', userError);
+      // Fallback: usar RPC ou SQL direto
+      throw new Error(userError.message);
     }
-  });
 
-  if (!response.ok) {
-    console.error('[LOGIN] Fetch failed:', response.status);
-    return res.status(500).json({ error: 'Erro ao realizar login' });
+    if (!userData) {
+      console.log('[LOGIN] User not found in DB');
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+
+    console.log('[LOGIN] User found, role:', userData.role);
+    res.json(userData);
+  } catch (err) {
+    console.error('[LOGIN] Fallback to fetch:', err.message);
+    // Fallback: usar fetch direto sem select=*
+    const response = await fetch(`${supabaseUrl}/rest/v1/users?uid=eq.${authData.user.id}`, {
+      headers: {
+        'apikey': supabaseServiceRoleKey,
+        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+        'Cache-Control': 'no-cache, no-store, must-revalidate'
+      }
+    });
+
+    if (!response.ok) {
+      console.error('[LOGIN] Fallback fetch failed:', response.status);
+      return res.status(500).json({ error: 'Erro ao realizar login' });
+    }
+
+    const data = await response.json();
+    if (!data || data.length === 0) return res.status(401).json({ error: 'Credenciais inválidas' });
+    res.json(data[0]);
   }
-
-  const data = await response.json();
-  console.log('[LOGIN] Returned:', data[0]);
-  if (!data || data.length === 0) return res.status(401).json({ error: 'Credenciais inválidas' });
-  res.json(data[0]);
 });
 
 app.get('/api/schedules', async (req, res) => {
