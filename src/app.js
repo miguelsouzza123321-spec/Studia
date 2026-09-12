@@ -88,6 +88,7 @@ let reportModel = 'prof_turma'; // 'prof_turma', 'prof_subject', 'turma_grid'
 let reportCardSize = localStorage.getItem('reportCardSize') || 'medium'; // 'small', 'medium', 'large'
 let teacherSchedulesTab = 'grid'; // 'grid' or 'list'
 let mobileMenuOpen = false;
+let createUserModalVisible = false;
 
 // --- API ---
 let apiBaseUrl = (localStorage.getItem('api_base_url') || '').trim();
@@ -1209,6 +1210,55 @@ const CreateEscolaModal = () => `
   </div>
 `;
 
+const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
+  <div id="create-user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideCreateUserModal()"></div>
+    <div class="bg-white w-full max-w-md rounded-3xl p-8 relative z-10 shadow-2xl">
+      <h3 class="text-2xl font-bold mb-6">Criar Novo Usuário</h3>
+      <form onsubmit="actions.createUser(event)" class="space-y-4">
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Nome</label>
+          <input type="text" id="user-displayname" placeholder="Ex: João Silva" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">E-mail</label>
+          <input type="email" id="user-email" placeholder="Ex: joao@example.com" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Senha</label>
+          <input type="password" id="user-password" placeholder="Mínimo 8 caracteres" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required minlength="8">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Matéria</label>
+          <input type="text" id="user-subject" placeholder="Ex: Matemática" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40">
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Cargo</label>
+          <select id="user-role" class="w-full bg-slate-50 border p-3 rounded-xl outline-none font-bold focus:ring-2 focus:ring-blue-500/40" required>
+            ${viewerRole === 'admin'
+              ? `
+                <option value="">Selecione um cargo</option>
+                <option value="teacher">Professor</option>
+                <option value="diretor">Diretor</option>
+                <option value="admin">Administrador</option>
+              `
+              : `
+                <option value="">Selecione um cargo</option>
+                <option value="teacher">Professor</option>
+                <option value="diretor">Diretor</option>
+              `
+            }
+          </select>
+        </div>
+        <div class="flex gap-4 pt-4">
+          <button type="button" onclick="actions.hideCreateUserModal()" class="flex-1 py-3 border rounded-xl font-bold hover:bg-slate-50">Cancelar</button>
+          <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition-all">Criar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+`;
+
 const AdminOverviewTab = () => {
   const connected = !!apiBaseUrl;
   const totalSchedules = schedules.length;
@@ -1460,6 +1510,7 @@ const AdminView = () => `
     ${EditModal()}
     ${DeleteConfirmModal()}
     ${CreateEscolaModal()}
+    ${CreateUserModal({ viewerRole: 'admin' })}
   </div>
 `;
 
@@ -1506,6 +1557,7 @@ const DiretorView = () => `
     ${CertModal()}
     ${EditModal()}
     ${DeleteConfirmModal()}
+    ${CreateUserModal({ viewerRole: 'diretor' })}
   </div>
 `;
 
@@ -1526,13 +1578,20 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
 
   return `
     <div class="space-y-6">
-      <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+      <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 class="text-2xl font-black text-slate-900">Gestão de usuários</h3>
           <p class="text-sm text-slate-500 font-medium">${viewerRole === 'admin' ? 'Todas as contas cadastradas no sistema.' : 'Diretores e professores cadastrados no sistema.'}</p>
         </div>
-        <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em]">
-          <i data-lucide="users" class="w-3.5 h-3.5"></i> ${users.length} usuários
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+          ${(viewerRole === 'admin' || viewerRole === 'diretor') ? `
+            <button onclick="actions.showCreateUserModal('${viewerRole}')" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 text-sm shadow-md">
+              <i data-lucide="plus" class="w-4 h-4"></i> Criar Usuário
+            </button>
+          ` : ''}
+          <div class="inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-700 px-3 py-1.5 text-xs font-black uppercase tracking-[0.18em]">
+            <i data-lucide="users" class="w-3.5 h-3.5"></i> ${users.length} usuários
+          </div>
         </div>
       </div>
 
@@ -3099,6 +3158,66 @@ const actions = {
       showDialog('Escola excluída com sucesso.');
     } catch (err) {
       showDialog(err.message || 'Erro ao excluir escola.');
+    }
+  },
+
+  showCreateUserModal(viewerRole = 'admin') {
+    const modal = document.getElementById('create-user-modal');
+    if (modal) modal.classList.remove('hidden');
+    createUserModalVisible = true;
+  },
+
+  hideCreateUserModal() {
+    const modal = document.getElementById('create-user-modal');
+    if (modal) modal.classList.add('hidden');
+    createUserModalVisible = false;
+    // Clear form fields
+    document.getElementById('user-displayname')?.value && (document.getElementById('user-displayname').value = '');
+    document.getElementById('user-email')?.value && (document.getElementById('user-email').value = '');
+    document.getElementById('user-password')?.value && (document.getElementById('user-password').value = '');
+    document.getElementById('user-subject')?.value && (document.getElementById('user-subject').value = '');
+    document.getElementById('user-role')?.value && (document.getElementById('user-role').value = '');
+  },
+
+  async createUser(event) {
+    if (event) event.preventDefault();
+
+    const displayName = document.getElementById('user-displayname')?.value?.trim();
+    const email = document.getElementById('user-email')?.value?.trim();
+    const password = document.getElementById('user-password')?.value;
+    const subject = document.getElementById('user-subject')?.value?.trim();
+    const role = document.getElementById('user-role')?.value;
+
+    // Validações básicas
+    if (!displayName) return showDialog('Nome é obrigatório.');
+    if (!email) return showDialog('E-mail é obrigatório.');
+    if (!password) return showDialog('Senha é obrigatória.');
+    if (password.length < 8) return showDialog('Senha deve ter no mínimo 8 caracteres.');
+    if (!role) return showDialog('Cargo é obrigatório.');
+
+    // Validação de e-mail simples
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return showDialog('E-mail inválido.');
+
+    try {
+      const payload = {
+        displayName,
+        email,
+        password,
+        role,
+        userRole: user?.role,
+        userSchoolId: user?.school_id
+      };
+      if (subject) payload.subject = subject;
+
+      const response = await api.post('/api/users/create', payload);
+      this.hideCreateUserModal();
+      await this.refreshData();
+      this.init();
+      showDialog('Usuário criado com sucesso!');
+    } catch (err) {
+      const errorMsg = err.message || 'Erro ao criar usuário.';
+      showDialog(errorMsg);
     }
   }
 };
