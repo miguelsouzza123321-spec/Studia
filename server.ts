@@ -163,6 +163,102 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+app.post('/api/users/create', async (req, res) => {
+  const { email, password, displayName, subject, role, schoolId } = req.body;
+  const { userRole, userSchoolId } = req.body; // Quem está criando (extraído do JWT/session)
+
+  if (!email || !password || !displayName || !role) {
+    return res.status(400).json({ error: 'Email, senha, nome e cargo são obrigatórios' });
+  }
+
+  if (!VALID_ROLES.includes(role)) {
+    return res.status(400).json({ error: 'Cargo inválido' });
+  }
+
+  // VALIDAÇÕES DE PERMISSÃO
+  // Admin pode criar qualquer um
+  if (userRole === 'admin') {
+    // OK - criar qualquer role
+  }
+  // Diretor pode criar diretor/professor da mesma escola
+  else if (userRole === 'diretor') {
+    if (role === 'admin') {
+      return res.status(403).json({ error: 'Diretor não pode criar admin' });
+    }
+    if (schoolId && schoolId !== userSchoolId) {
+      return res.status(403).json({ error: 'Diretor só pode criar usuários da mesma escola' });
+    }
+  }
+  // Professor não pode criar ninguém
+  else {
+    return res.status(403).json({ error: 'Você não tem permissão para criar usuários' });
+  }
+
+  try {
+    // Criar usuário no Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { displayName, role, subject }
+    });
+
+    if (authError) {
+      console.error('[CREATE_USER] Auth error:', authError);
+      return res.status(400).json({
+        error: authError.message === 'A user with this email address has already been registered'
+          ? 'Email já cadastrado'
+          : `Erro ao criar usuário: ${authError.message}`
+      });
+    }
+
+    const uid = authData.user.id;
+    const finalSchoolId = schoolId || (userRole === 'diretor' ? userSchoolId : DEFAULT_SCHOOL_ID);
+
+    // Inserir na tabela users (sem school_id primeiro)
+    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=*`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseServiceRoleKey,
+        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        uid,
+        email,
+        displayName,
+        role,
+        subject: subject || null
+      })
+    });
+
+    if (!insertResponse.ok) {
+      console.error('[CREATE_USER] Insert failed');
+      await supabase.auth.admin.deleteUser(uid);
+      return res.status(500).json({ error: 'Erro ao criar perfil no banco' });
+    }
+
+    // Atualizar com school_id
+    const { data: userData, error: updateError } = await supabase
+      .from('users')
+      .update({ school_id: finalSchoolId })
+      .eq('uid', uid)
+      .select('uid,email,displayName,role,subject,school_id')
+      .single();
+
+    if (updateError) {
+      console.error('[CREATE_USER] Update school_id failed:', updateError);
+      // Não falha - continua sem school_id
+    }
+
+    res.json(userData || { uid, email, displayName, role, school_id: finalSchoolId });
+  } catch (err) {
+    console.error('[CREATE_USER] Error:', err);
+    res.status(500).json({ error: 'Erro ao criar usuário' });
+  }
+});
+
 app.get('/api/schedules', async (req, res) => {
   let query = supabase.from('schedules').select('*').order('date', { ascending: false }).order('startTime', { ascending: true });
   if (req.query.teacherId) {
