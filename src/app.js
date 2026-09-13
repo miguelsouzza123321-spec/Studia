@@ -650,17 +650,17 @@ const LandingView = () => `
     <style>
       .landing-grid-bg { position: fixed; inset: 0; z-index: 0; opacity: 0.1; background-image: linear-gradient(0deg, transparent 24%, rgba(91, 153, 194, 0.3) 25%, rgba(91, 153, 194, 0.3) 26%, transparent 27%, transparent 74%, rgba(91, 153, 194, 0.3) 75%, rgba(91, 153, 194, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(91, 153, 194, 0.3) 25%, rgba(91, 153, 194, 0.3) 26%, transparent 27%, transparent 74%, rgba(91, 153, 194, 0.3) 75%, rgba(91, 153, 194, 0.3) 76%, transparent 77%, transparent); background-size: 50px 50px; animation: gridShift 20s linear infinite; }
       @keyframes gridShift { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
-      .landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid rgba(91, 153, 194, 0.1); }
+      .landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(10, 14, 39, 0.95); backdrop-filter: blur(15px); position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid rgba(91, 153, 194, 0.25); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
       .landing-logo { font-size: 0; font-weight: 900; color: #5B99C2; display: flex; align-items: center; gap: 0.5rem; }
       .landing-nav-links { display: flex; gap: 2.5rem; list-style: none; }
-      .landing-nav-links a { text-decoration: none; color: #cbd5e1; font-weight: 500; transition: color 0.3s; cursor: pointer; }
-      .landing-nav-links a:hover { color: #5B99C2; }
-      .landing-cta-btn { background: linear-gradient(135deg, #2E5077, #5B99C2); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: 1px solid rgba(91, 153, 194, 0.3); cursor: pointer; }
-      .landing-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(91, 153, 194, 0.3); }
+      .landing-nav-links a { text-decoration: none; color: #e0e7ff; font-weight: 500; transition: all 0.3s; cursor: pointer; font-size: 0.95rem; }
+      .landing-nav-links a:hover { color: #5B99C2; text-shadow: 0 0 10px rgba(91, 153, 194, 0.5); }
+      .landing-cta-btn { background: linear-gradient(135deg, #3b82f6, #5B99C2); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: 1px solid rgba(91, 153, 194, 0.5); cursor: pointer; }
+      .landing-cta-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(91, 153, 194, 0.4); border-color: #5B99C2; }
       .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; position: relative; z-index: 1; }
-      .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, #e0e7ff 0%, #5B99C2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: slideInLeft 0.8s ease-out; }
+      .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #5B99C2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: slideInLeft 0.8s ease-out; font-weight: 900; }
       .landing-hero-content h1 em { font-style: italic; color: #5B99C2; }
-      .landing-hero-content p { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
+      .landing-hero-content p { font-size: 1.2rem; color: #e0e7ff; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
       .landing-hero-buttons { display: flex; gap: 1.5rem; animation: slideInLeft 0.8s ease-out 0.4s backwards; }
       .landing-hero-buttons .landing-cta-btn { padding: 1rem 2rem; font-size: 1.1rem; }
       .landing-secondary-btn { background: transparent; color: #cbd5e1; border: 2px solid rgba(91, 153, 194, 0.5); }
@@ -690,25 +690,25 @@ const LandingView = () => `
       }
       @keyframes pulseSchool { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.08); } }
       .landing-features { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.5), rgba(26, 31, 58, 0.5)); position: relative; z-index: 1; }
-      .landing-section-title { text-align: center; font-size: 2.5rem; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-section-title { text-align: center; font-size: 2.5rem; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; color: #ffffff; font-weight: 800; }
       .landing-section-title::before { content: "Funcionalidades "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
       .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
-      .landing-feature-card { padding: 2rem; background: linear-gradient(135deg, rgba(91, 153, 194, 0.1), rgba(46, 80, 119, 0.1)); border-radius: 12px; border: 1px solid rgba(91, 153, 194, 0.2); transition: all 0.3s; animation: fadeInUp 0.8s ease-out; }
-      .landing-feature-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(91, 153, 194, 0.15); border-color: #5B99C2; background: linear-gradient(135deg, rgba(91, 153, 194, 0.15), rgba(46, 80, 119, 0.15)); }
-      .landing-feature-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #2E5077, #5B99C2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1rem; color: white; }
-      .landing-feature-card h3 { color: #e0e7ff; margin-bottom: 1rem; font-size: 1.3rem; }
+      .landing-feature-card { padding: 2rem; background: linear-gradient(135deg, rgba(91, 153, 194, 0.15), rgba(46, 80, 119, 0.12)); border-radius: 12px; border: 1px solid rgba(91, 153, 194, 0.3); transition: all 0.4s ease; animation: fadeInUp 0.8s ease-out; opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
+      .landing-feature-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 20px 50px rgba(91, 153, 194, 0.25); border-color: #5B99C2; background: linear-gradient(135deg, rgba(91, 153, 194, 0.2), rgba(46, 80, 119, 0.18)); }
+      .landing-feature-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #3b82f6, #5B99C2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1rem; color: white; box-shadow: 0 4px 15px rgba(91, 153, 194, 0.3); }
+      .landing-feature-card h3 { color: #ffffff; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 700; }
       .landing-feature-card p { color: #cbd5e1; line-height: 1.6; }
       .landing-benefits { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(26, 31, 58, 0.8)); position: relative; z-index: 1; }
       .landing-benefits-content { max-width: 900px; margin: 0 auto; }
-      .landing-benefits h2 { font-size: 2.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-benefits h2 { font-size: 2.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; color: #ffffff; font-weight: 800; }
       .landing-benefits h2::before { content: "Benefícios "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
-      .landing-benefit-item { display: flex; gap: 1.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; }
-      .landing-benefit-check { width: 40px; height: 40px; background: rgba(91, 153, 194, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; border: 1px solid rgba(91, 153, 194, 0.3); }
-      .landing-benefit-item p { font-size: 1.1rem; line-height: 1.6; color: #cbd5e1; }
+      .landing-benefit-item { display: flex; gap: 1.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
+      .landing-benefit-check { width: 40px; height: 40px; background: linear-gradient(135deg, rgba(91, 153, 194, 0.3), rgba(59, 130, 246, 0.3)); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; border: 1px solid rgba(91, 153, 194, 0.4); }
+      .landing-benefit-item p { font-size: 1.1rem; line-height: 1.6; color: #e0e7ff; }
       .landing-contact { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(26, 31, 58, 0.9)); text-align: center; position: relative; z-index: 1; }
-      .landing-contact h2 { font-size: 2.5rem; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-contact h2 { font-size: 2.5rem; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; color: #ffffff; font-weight: 800; }
       .landing-contact h2::before { content: "Contato "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
-      .landing-contact p { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s backwards; }
+      .landing-contact p { font-size: 1.2rem; color: #e0e7ff; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s backwards; }
       .landing-footer { padding: 2rem 5%; background: rgba(10, 14, 39, 0.8); color: #cbd5e1; text-align: center; position: relative; z-index: 1; border-top: 1px solid rgba(91, 153, 194, 0.1); }
       @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
       @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
@@ -859,26 +859,28 @@ const LandingView = () => `
     </footer>
 
     <script>
-      // Animações ao scroll com Intersection Observer
-      const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+      // Animações fluidas ao scroll com Intersection Observer
+      const observerOptions = { threshold: 0.15, rootMargin: '0px 0px -60px 0px' };
       const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
+        entries.forEach((entry, index) => {
           if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            entry.target.style.transform = 'translateY(0)';
+            setTimeout(() => {
+              entry.target.style.opacity = '1';
+              entry.target.style.transform = 'translateY(0)';
+            }, index * 80);
             observer.unobserve(entry.target);
           }
         });
       }, observerOptions);
 
       setTimeout(() => {
-        document.querySelectorAll('.landing-feature-card, .landing-benefit-item, .landing-contact').forEach(el => {
+        document.querySelectorAll('.landing-feature-card, .landing-benefit-item').forEach((el, index) => {
           el.style.opacity = '0';
-          el.style.transform = 'translateY(30px)';
-          el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+          el.style.transform = 'translateY(40px)';
+          el.style.transition = 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
           observer.observe(el);
         });
-      }, 100);
+      }, 150);
     </script>
 
     <!-- Login/Register Modal -->
