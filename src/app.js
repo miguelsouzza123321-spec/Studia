@@ -382,6 +382,18 @@ const getDayOfWeek = (dateObj) => {
   return day === 0 ? 7 : day;
 };
 
+// Helper function to determine if a start time belongs to a specific turno
+const isSlotsMatchTurno = (startTime, turno) => {
+  if (turno === 'matutino') {
+    return startTime >= '07:00' && startTime < '12:00';
+  } else if (turno === 'vespertino') {
+    return startTime >= '12:00' && startTime < '18:00';
+  } else if (turno === 'noturno') {
+    return startTime >= '18:00' && startTime < '23:00';
+  }
+  return true; // 'auto' or unknown
+};
+
 const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma') => {
   const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
   const grid = {};
@@ -2136,23 +2148,31 @@ const RelatoriosTab = () => {
           <!-- Turmas Cards Grid -->
           ${(() => {
             // Extract unique turmas from filtered schedules
-            const turmas = [...new Set(filteredSchedules
+            const allTurmas = [...new Set(filteredSchedules
               .filter(s => s.classGroup && s.classGroup.trim() !== '')
               .map(s => s.classGroup)
             )].sort();
+
+            // Filter turmas to only show those that have schedules for the selected turno
+            const turmas = reportTurno !== 'auto'
+              ? allTurmas.filter(turmaName => {
+                  const turmaSchedules = filteredSchedules.filter(s => s.classGroup === turmaName);
+                  return turmaSchedules.some(s => isSlotsMatchTurno(s.startTime, reportTurno));
+                })
+              : allTurmas;
 
             if (turmas.length === 0) {
               return `
                 <div class="text-center py-20 text-slate-400 font-bold space-y-2 col-span-full">
                   <i data-lucide="info" class="w-12 h-12 mx-auto text-slate-300 col-span-full"></i>
-                  <p>Nenhuma turma cadastrada ou detectada nos horários selecionados. Certifique-se de preencher o campo 'Turma' ao criar novos horários.</p>
+                  <p>Nenhuma turma cadastrada ou detectada nos horários selecionados para o turno "${reportTurno === 'matutino' ? 'Manhã' : reportTurno === 'vespertino' ? 'Tarde' : 'Noite'}". Certifique-se de preencher o campo 'Turma' ao criar novos horários.</p>
                 </div>
               `;
             }
             return `
               <div class="${gridColsClass}">
                 ${turmas.map(turmaName => {
-                  // Filter schedules by turma
+                  // Filter schedules by turma (all schedules, not filtered by turno)
                   const turmaSchedules = filteredSchedules.filter(s => s.classGroup === turmaName);
                   return TurmaScheduleCard(turmaName, turmaSchedules, slots);
                 }).join('')}
