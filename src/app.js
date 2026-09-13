@@ -666,17 +666,25 @@ const LandingView = () => `
       .landing-school-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; animation: pulseSchool 2s ease-in-out infinite; }
       .landing-school { font-size: 4rem; margin-bottom: 0.5rem; filter: drop-shadow(0 4px 12px rgba(46, 80, 119, 0.3)); }
       .landing-school-label { font-size: 0.9rem; font-weight: 700; color: #2E5077; letter-spacing: 1px; }
-      .landing-orbit-item { position: absolute; width: 60px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .landing-orbit-item { position: absolute; width: 70px; height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
       .landing-module { font-size: 2rem; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15)); }
       .landing-module-label { font-size: 0.75rem; font-weight: 600; color: #2E5077; text-align: center; white-space: nowrap; }
-      .landing-orbit-1 { animation: orbit 8s linear infinite; --delay: 0s; }
-      .landing-orbit-2 { animation: orbit 8s linear infinite; --delay: 1.33s; }
-      .landing-orbit-3 { animation: orbit 8s linear infinite; --delay: 2.66s; }
-      .landing-orbit-4 { animation: orbit 8s linear infinite; --delay: 4s; }
-      .landing-orbit-5 { animation: orbit 8s linear infinite; --delay: 5.33s; }
-      .landing-orbit-6 { animation: orbit 8s linear infinite; --delay: 6.66s; }
-      @keyframes orbit { 0% { transform: translate(calc(120px * cos(0deg)), calc(120px * sin(0deg))) rotateZ(0deg); } 100% { transform: translate(calc(120px * cos(360deg)), calc(120px * sin(360deg))) rotateZ(360deg); } }
-      @keyframes pulseSchool { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.05); } }
+      .landing-orbit-1 { animation: orbitCircle 12s linear infinite; }
+      .landing-orbit-2 { animation: orbitCircle 12s linear infinite; }
+      .landing-orbit-3 { animation: orbitCircle 12s linear infinite; }
+      .landing-orbit-4 { animation: orbitCircle 12s linear infinite; }
+      .landing-orbit-5 { animation: orbitCircle 12s linear infinite; }
+      .landing-orbit-6 { animation: orbitCircle 12s linear infinite; }
+      @keyframes orbitCircle {
+        0% { transform: translate(140px, 0); }
+        16.66% { transform: translate(70px, 121px); }
+        33.33% { transform: translate(-70px, 121px); }
+        50% { transform: translate(-140px, 0); }
+        66.66% { transform: translate(-70px, -121px); }
+        83.33% { transform: translate(70px, -121px); }
+        100% { transform: translate(140px, 0); }
+      }
+      @keyframes pulseSchool { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.08); } }
       .landing-features { padding: 100px 5%; background: white; }
       .landing-section-title { text-align: center; font-size: 2.5rem; color: #2E5077; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; }
       .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
@@ -748,27 +756,27 @@ const LandingView = () => `
           </div>
 
           <!-- Módulos orbitando -->
-          <div class="landing-orbit-item landing-orbit-1">
+          <div class="landing-orbit-item landing-orbit-1" style="animation-delay: 0s;">
             <div class="landing-module">📅</div>
             <div class="landing-module-label">Horários</div>
           </div>
-          <div class="landing-orbit-item landing-orbit-2">
+          <div class="landing-orbit-item landing-orbit-2" style="animation-delay: -2s;">
             <div class="landing-module">👥</div>
             <div class="landing-module-label">Alunos</div>
           </div>
-          <div class="landing-orbit-item landing-orbit-3">
+          <div class="landing-orbit-item landing-orbit-3" style="animation-delay: -4s;">
             <div class="landing-module">📊</div>
             <div class="landing-module-label">Desempenho</div>
           </div>
-          <div class="landing-orbit-item landing-orbit-4">
+          <div class="landing-orbit-item landing-orbit-4" style="animation-delay: -6s;">
             <div class="landing-module">🧪</div>
             <div class="landing-module-label">Laboratórios</div>
           </div>
-          <div class="landing-orbit-item landing-orbit-5">
+          <div class="landing-orbit-item landing-orbit-5" style="animation-delay: -8s;">
             <div class="landing-module">📢</div>
             <div class="landing-module-label">Avisos</div>
           </div>
-          <div class="landing-orbit-item landing-orbit-6">
+          <div class="landing-orbit-item landing-orbit-6" style="animation-delay: -10s;">
             <div class="landing-module">👨‍🏫</div>
             <div class="landing-module-label">Professores</div>
           </div>
