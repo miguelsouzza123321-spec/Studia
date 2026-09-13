@@ -744,8 +744,7 @@ const LandingView = () => `
         <h1 style="color: #0a0e27; background: none; -webkit-text-fill-color: unset;"><span style="color: #0a0e27;">Gestão Escolar</span><br><em style="color: #5B99C2;">Inteligente</em> & <em style="color: #5B99C2;">Integrada</em></h1>
         <p style="color: #0a0e27;">Sistema digital que centraliza horários, laboratórios e presença em uma plataforma segura e profissional para sua escola.</p>
         <div class="landing-hero-buttons">
-          <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Agende uma Demo</button>
-          <button onclick="actions.showLoginModal('login')" class="landing-cta-btn landing-secondary-btn">Testar Agora</button>
+          <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Entrar</button>
         </div>
       </div>
     </section>
