@@ -657,7 +657,8 @@ const LandingView = () => `
       .landing-nav-links a:hover { color: #5B99C2; text-shadow: 0 0 10px rgba(91, 153, 194, 0.5); }
       .landing-cta-btn { background: linear-gradient(135deg, #3b82f6, #5B99C2); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: 1px solid rgba(91, 153, 194, 0.5); cursor: pointer; }
       .landing-cta-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(91, 153, 194, 0.4); border-color: #5B99C2; }
-      .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; position: relative; z-index: 1; }
+      .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr; align-items: center; gap: 4rem; position: relative; z-index: 1; max-width: 900px; }
+      .landing-hero-content { max-width: 100%; }
       .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #5B99C2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: slideInLeft 0.8s ease-out; font-weight: 900; }
       .landing-hero-content h1 em { font-style: italic; color: #5B99C2; }
       .landing-hero-content p { font-size: 1.2rem; color: #e0e7ff; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
@@ -740,46 +741,11 @@ const LandingView = () => `
 
     <section class="landing-hero">
       <div class="landing-hero-content">
-        <h1>Gestão Escolar<br><em>Inteligente</em> & <em>Integrada</em></h1>
+        <h1 style="color: #ffffff; background: none; -webkit-text-fill-color: unset;">Gestão Escolar<br><em>Inteligente</em> & <em>Integrada</em></h1>
         <p>Sistema digital que centraliza horários, laboratórios e presença em uma plataforma segura e profissional para sua escola.</p>
         <div class="landing-hero-buttons">
           <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Agende uma Demo</button>
           <button onclick="actions.showLoginModal('login')" class="landing-cta-btn landing-secondary-btn">Testar Agora</button>
-        </div>
-      </div>
-      <div class="landing-hero-visual">
-        <div class="landing-school-system">
-          <!-- Centro: Escola -->
-          <div class="landing-school-center">
-            <div class="landing-school">🏫</div>
-            <div class="landing-school-label">STUDIA</div>
-          </div>
-
-          <!-- Módulos orbitando -->
-          <div class="landing-orbit-item landing-orbit-1" style="animation-delay: 0s;">
-            <div class="landing-module">📅</div>
-            <div class="landing-module-label">Horários</div>
-          </div>
-          <div class="landing-orbit-item landing-orbit-2" style="animation-delay: -2s;">
-            <div class="landing-module">👥</div>
-            <div class="landing-module-label">Alunos</div>
-          </div>
-          <div class="landing-orbit-item landing-orbit-3" style="animation-delay: -4s;">
-            <div class="landing-module">📊</div>
-            <div class="landing-module-label">Desempenho</div>
-          </div>
-          <div class="landing-orbit-item landing-orbit-4" style="animation-delay: -6s;">
-            <div class="landing-module">🧪</div>
-            <div class="landing-module-label">Laboratórios</div>
-          </div>
-          <div class="landing-orbit-item landing-orbit-5" style="animation-delay: -8s;">
-            <div class="landing-module">📢</div>
-            <div class="landing-module-label">Avisos</div>
-          </div>
-          <div class="landing-orbit-item landing-orbit-6" style="animation-delay: -10s;">
-            <div class="landing-module">👨‍🏫</div>
-            <div class="landing-module-label">Professores</div>
-          </div>
         </div>
       </div>
     </section>
