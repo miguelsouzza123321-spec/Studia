@@ -535,9 +535,25 @@ const validateUserPermission = async (req: any, requiredRole?: string[]): Promis
 const VALID_ROLES = ['teacher', 'diretor', 'admin'];
 
 app.patch('/api/users/:uid/role', async (req, res) => {
+  // Server-side permission validation
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+
   const { role } = req.body;
   if (!VALID_ROLES.includes(role)) {
     return res.status(400).json({ error: 'Perfil inválido' });
+  }
+
+  // Validar se tem permissão para promover
+  if (userInfo.role === 'teacher') {
+    return res.status(403).json({ error: 'Professores não podem mudar roles' });
+  }
+
+  if (userInfo.role === 'diretor') {
+    // Diretor só pode promover para teacher ou diretor (não admin)
+    if (role === 'admin') {
+      return res.status(403).json({ error: 'Diretores não podem criar admins' });
+    }
   }
 
   const { data, error } = await supabase
