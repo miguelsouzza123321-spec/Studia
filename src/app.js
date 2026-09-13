@@ -2135,7 +2135,12 @@ const RelatoriosTab = () => {
         ${reportModel === 'turma_grid' ? `
           <!-- Turmas Cards Grid -->
           ${(() => {
-            const turmas = getDetectedTurmas(filteredSchedules);
+            // Extract unique turmas from filtered schedules
+            const turmas = [...new Set(filteredSchedules
+              .filter(s => s.classGroup && s.classGroup.trim() !== '')
+              .map(s => s.classGroup)
+            )].sort();
+
             if (turmas.length === 0) {
               return `
                 <div class="text-center py-20 text-slate-400 font-bold space-y-2 col-span-full">
@@ -2146,9 +2151,10 @@ const RelatoriosTab = () => {
             }
             return `
               <div class="${gridColsClass}">
-                ${turmas.map(tName => {
-                  const turmaSchedules = filteredSchedules.filter(s => s.classGroup === tName);
-                  return TurmaScheduleCard(tName, turmaSchedules, slots);
+                ${turmas.map(turmaName => {
+                  // Filter schedules by turma
+                  const turmaSchedules = filteredSchedules.filter(s => s.classGroup === turmaName);
+                  return TurmaScheduleCard(turmaName, turmaSchedules, slots);
                 }).join('')}
               </div>
             `;
