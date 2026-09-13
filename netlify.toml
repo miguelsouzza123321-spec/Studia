@@ -1,0 +1,17 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "dist"
+
+[dev]
+  command = "npm run dev"
+  port = 3000
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[env]
+  SUPABASE_URL = "https://lduzcohvwzqtedndnlvg.supabase.co"
+  SUPABASE_ANON_KEY = "sb_publishable_acblfYqCzfrYnipCptiWig_AIuJSEKT"
