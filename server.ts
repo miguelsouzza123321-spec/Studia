@@ -286,12 +286,13 @@ app.post('/api/users/create', async (req, res) => {
 });
 
 app.get('/api/schedules', async (req, res) => {
-  let query = supabase.from('schedules').select('*').order('date', { ascending: false }).order('starttime', { ascending: true });
+  let query = supabase.from('schedules').select('*');
   if (req.query.teacherId) {
     query = query.eq('teacherid', req.query.teacherId);
   } else if (req.query.schoolId) {
     query = query.eq('school_id', req.query.schoolId);
   }
+  query = query.order('date', { ascending: true }).order('starttime', { ascending: true });
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar horários' });
   res.json(transformKeys(data));
@@ -447,10 +448,59 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
   const { data: certificate, error: findError } = await supabase.from('certificates').select('teacherId,date').eq('id', req.params.id).maybeSingle();
   if (findError) return res.status(500).json({ error: 'Erro ao buscar certificado' });
   if (!certificate) return res.status(404).json({ error: 'Certificado não encontrado' });
-  const { error } = await supabase.from('certificates').update({ status: 'approved' }).eq('id', req.params.id);
-  if (error) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
-  const { error: schedError } = await supabase.from('schedules').update({ status: 'vaga' }).eq('teacherid', certificate.teacherId).eq('date', certificate.date);
-  if (schedError) return res.status(500).json({ error: 'Erro ao atualizar status dos horários' });
+
+  // Aprovar atestado
+  const { error: certError } = await supabase.from('certificates').update({ status: 'approved' }).eq('id', req.params.id);
+  if (certError) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
+
+  // Buscar aula do professor no dia do atestado
+  const { data: teacherSchedule, error: schedFindError } = await supabase
+    .from('schedules')
+    .select('*')
+    .eq('teacherid', certificate.teacherId)
+    .eq('date', certificate.date)
+    .single();
+
+  if (schedFindError && schedFindError.code !== 'PGRST116') {
+    return res.status(500).json({ error: 'Erro ao buscar aula do professor' });
+  }
+
+  if (teacherSchedule) {
+    // Buscar último horário do dia (maior startTime)
+    const { data: lastSchedule, error: lastError } = await supabase
+      .from('schedules')
+      .select('*')
+      .eq('date', certificate.date)
+      .order('starttime', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (!lastError && lastSchedule && lastSchedule.id !== teacherSchedule.id) {
+      // Fazer swap: trocar aulas de lugar
+      const tempTeacher = teacherSchedule.teacherid;
+      const tempSubject = teacherSchedule.subject;
+      const tempClassGroup = teacherSchedule.classgroup;
+
+      // Atualizar aula do professor com dados da última aula
+      await supabase.from('schedules').update({
+        teacherid: lastSchedule.teacherid,
+        subject: lastSchedule.subject,
+        classgroup: lastSchedule.classgroup,
+      }).eq('id', teacherSchedule.id);
+
+      // Atualizar última aula com dados do professor
+      await supabase.from('schedules').update({
+        teacherid: tempTeacher,
+        subject: tempSubject,
+        classgroup: tempClassGroup,
+        status: 'vaga',
+      }).eq('id', lastSchedule.id);
+    } else {
+      // Se não houver outra aula ou é a única, apenas marcar como vaga
+      await supabase.from('schedules').update({ status: 'vaga' }).eq('id', teacherSchedule.id);
+    }
+  }
+
   res.json({ status: 'success' });
 });
 
