@@ -1722,7 +1722,6 @@ const HorariosTab = () => `
           <th class="px-8 py-5">Matéria</th>
           <th class="px-8 py-5">Horário / Data</th>
           <th class="px-8 py-5">Professor</th>
-          <th class="px-8 py-5">Local</th>
           <th class="px-8 py-5 text-center">Status</th>
           <th class="px-8 py-5 print:hidden"></th>
         </tr>
@@ -1739,7 +1738,6 @@ const HorariosTab = () => `
               <span class="font-bold text-slate-800">${s.teacherName}</span>
               ${s.classGroup ? `<span class="block text-xs font-semibold text-blue-600 mt-0.5">${s.classGroup}</span>` : ''}
             </td>
-            <td class="px-8 py-5 text-sm">${s.room}</td>
             <td class="px-8 py-5">
               <div class="flex justify-center">
                 <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full ${
