@@ -899,6 +899,7 @@ const TeacherView = () => {
   const teacherNavItems = [
     { id: 'horarios', icon: 'calendar', label: 'Meus Horários' },
     { id: 'labs', icon: 'test-tube', label: 'Laboratórios' },
+    { id: 'materias', icon: 'book', label: 'Minhas Matérias' },
     { id: 'atestados', icon: 'file-text', label: 'Meus Atestados' },
   ];
   const teacherProfile = {
@@ -918,7 +919,7 @@ const TeacherView = () => {
           <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-toggle-mobile-menu">
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
-          <h2 class="font-bold text-base md:text-lg capitalize">${currentTab === 'horarios' ? 'Meus Horários' : (currentTab === 'labs' ? 'Laboratórios' : 'Meus Atestados')}</h2>
+          <h2 class="font-bold text-base md:text-lg capitalize">${currentTab === 'horarios' ? 'Meus Horários' : (currentTab === 'labs' ? 'Laboratórios' : (currentTab === 'materias' ? 'Minhas Matérias' : 'Meus Atestados'))}</h2>
         </div>
         <div class="flex gap-2">
           ${currentTab === 'atestados' ? `
@@ -1118,6 +1119,7 @@ const TeacherView = () => {
             </div>
           </div>
         ` : ''}
+        ${currentTab === 'materias' ? MateriasTab() : ''}
         ${currentTab === 'labs' ? LabsTab() : ''}
       </div>
     </main>
@@ -1872,6 +1874,50 @@ const HorariosTab = () => `
   </div>
 `;
 
+const MateriasTab = () => `
+  <div class="space-y-8 animate-fade-in">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h3 class="text-xl md:text-2xl font-black text-slate-900">Minhas Matérias</h3>
+        <p class="text-xs md:text-sm text-slate-500 font-bold">Gerencie as matérias que você leciona.</p>
+      </div>
+      <button onclick="actions.showAddMatériaModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
+        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Matéria
+      </button>
+    </div>
+
+    <div class="grid gap-4">
+      ${(() => {
+        const teacherSubjects = window.teacherSubjects || [];
+        if (teacherSubjects.length === 0) {
+          return `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+              <i data-lucide="book" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+              <p class="text-slate-400 font-bold">Você ainda não adicionou nenhuma matéria.</p>
+            </div>
+          `;
+        }
+        return teacherSubjects.map(s => `
+          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex items-center justify-between hover:shadow-md transition-all">
+            <div class="flex items-center gap-4">
+              <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                <i data-lucide="book-open" class="w-6 h-6 text-blue-600"></i>
+              </div>
+              <div>
+                <h4 class="font-bold text-slate-900">${s.subject}</h4>
+                <p class="text-xs text-slate-400">Matéria</p>
+              </div>
+            </div>
+            <button onclick="actions.deleteMatéria('${s.subject}')" class="text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-all">
+              <i data-lucide="trash-2" class="w-5 h-5"></i>
+            </button>
+          </div>
+        `).join('');
+      })()}
+    </div>
+  </div>
+`;
+
 const LabsTab = () => `
   <div class="space-y-8">
     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -2404,7 +2450,7 @@ const SlidesTab = () => `
 const TAB_ACCESS = {
   admin: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   diretor: ['horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
-  teacher: ['horarios', 'labs', 'atestados'],
+  teacher: ['horarios', 'labs', 'materias', 'atestados'],
 };
 
 const actions = {
@@ -2678,6 +2724,38 @@ const actions = {
     this.init();
   },
 
+  showAddMatériaModal() {
+    const subject = prompt('Informe a matéria que você leciona:');
+    if (!subject) return;
+    this.addMatéria(subject);
+  },
+
+  async addMatéria(subject) {
+    if (!user || !user.uid) return;
+    try {
+      const res = await api.post(`/api/teachers/${user.uid}/subjects`, { subject });
+      if (!window.teacherSubjects) window.teacherSubjects = [];
+      window.teacherSubjects.push(res);
+      render(TeacherView());
+      lucide.createIcons();
+    } catch (err) {
+      showDialog(err.message);
+    }
+  },
+
+  async deleteMatéria(subject) {
+    if (!user || !user.uid) return;
+    if (!confirm(`Deseja remover a matéria "${subject}"?`)) return;
+    try {
+      await api.delete(`/api/teachers/${user.uid}/subjects/${encodeURIComponent(subject)}`);
+      window.teacherSubjects = (window.teacherSubjects || []).filter(m => m.subject !== subject);
+      render(TeacherView());
+      lucide.createIcons();
+    } catch (err) {
+      showDialog(err.message);
+    }
+  },
+
   normalizeSchedules(schedules) {
     // Convert snake_case from API to camelCase for frontend
     return schedules.map(s => {
@@ -2752,13 +2830,15 @@ const actions = {
         const results = await Promise.allSettled([
           api.get(`/api/schedules?teacherId=${user.uid}`),
           api.get('/api/labs/bookings'),
-          api.get('/api/certificates')
+          api.get('/api/certificates'),
+          api.get(`/api/teachers/${user.uid}/subjects`)
         ]);
-        const [s, lb, c] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, lb, c, m] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         allUsers = [];
         labBookings = lb || [];
         certificates = c || [];
+        window.teacherSubjects = m || [];
       }
     } catch (err) {
       console.error('Data refresh error:', err);

@@ -684,6 +684,71 @@ app.delete('/api/schools/:id', async (req, res) => {
   res.json({ status: 'success' });
 });
 
+// Teacher Subjects endpoints
+app.get('/api/teachers/:uid/subjects', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+
+  const { data, error } = await supabase
+    .from('teacher_subjects')
+    .select('id,subject')
+    .eq('teacher_id', req.params.uid)
+    .order('subject', { ascending: true });
+
+  if (error) return res.status(500).json({ error: 'Erro ao buscar matérias' });
+  res.json(data);
+});
+
+app.post('/api/teachers/:uid/subjects', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+
+  // Teacher só pode adicionar suas próprias matérias
+  if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  let { subject } = req.body;
+  subject = sanitizeString(subject);
+
+  if (!subject) {
+    return res.status(400).json({ error: 'Matéria é obrigatória' });
+  }
+
+  const { data, error } = await supabase
+    .from('teacher_subjects')
+    .insert({ teacher_id: req.params.uid, subject })
+    .select();
+
+  if (error) {
+    if (error.message.includes('duplicate')) {
+      return res.status(409).json({ error: 'Matéria já existe' });
+    }
+    return res.status(500).json({ error: 'Erro ao adicionar matéria' });
+  }
+
+  res.json(data[0]);
+});
+
+app.delete('/api/teachers/:uid/subjects/:subject', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+
+  // Teacher só pode deletar suas próprias matérias
+  if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  const { error } = await supabase
+    .from('teacher_subjects')
+    .delete()
+    .eq('teacher_id', req.params.uid)
+    .eq('subject', req.params.subject);
+
+  if (error) return res.status(500).json({ error: 'Erro ao deletar matéria' });
+  res.json({ status: 'success' });
+});
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({ server: { middlewareMode: true }, appType: 'spa' });
