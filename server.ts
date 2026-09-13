@@ -595,7 +595,7 @@ app.post('/api/certificates', async (req, res) => {
 });
 
 app.patch('/api/certificates/:id/approve', async (req, res) => {
-  const { data: certificate, error: findError } = await supabase.from('certificates').select('teacherId,date').eq('id', req.params.id).maybeSingle();
+  const { data: certificate, error: findError } = await supabase.from('certificates').select('teacherid,date').eq('id', req.params.id).maybeSingle();
   if (findError) return res.status(500).json({ error: 'Erro ao buscar certificado' });
   if (!certificate) return res.status(404).json({ error: 'Certificado não encontrado' });
 
@@ -607,7 +607,7 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
   const { data: teacherSchedule, error: schedFindError } = await supabase
     .from('schedules')
     .select('*')
-    .eq('teacherid', certificate.teacherId)
+    .eq('teacherid', certificate.teacherid)
     .eq('date', certificate.date)
     .single();
 
