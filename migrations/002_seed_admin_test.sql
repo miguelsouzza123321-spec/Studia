@@ -34,7 +34,7 @@ INSERT INTO users (
 )
 ON CONFLICT (uid) DO NOTHING;
 
--- 4. Criar diretor de teste para Escola A
+-- 4. Criar diretor de teste para Escola 1
 INSERT INTO schools (name, createdBy) VALUES
   ('Escola A - Teste', NULL)
 ON CONFLICT DO NOTHING;

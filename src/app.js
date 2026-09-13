@@ -2524,6 +2524,24 @@ const actions = {
     this.init();
   },
 
+  normalizeSchedules(schedules) {
+    // Convert snake_case from API to camelCase for frontend
+    return schedules.map(s => ({
+      id: s.id,
+      date: s.date,
+      startTime: s.starttime || s.startTime,
+      endTime: s.endtime || s.endTime,
+      subject: s.subject,
+      room: s.room,
+      teacherId: s.teacherid || s.teacherId,
+      teacherName: s.teachername || s.teacherName,
+      classGroup: s.classgroup || s.classGroup,
+      status: s.status,
+      school_id: s.school_id,
+      createdAt: s.createdat || s.createdAt
+    }));
+  },
+
   async refreshData() {
     if (!user) return;
     try {
@@ -2537,7 +2555,7 @@ const actions = {
           api.get('/api/schools')
         ]);
         const [s, t, u, lb, c, sc] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
-        schedules = s || [];
+        schedules = this.normalizeSchedules(s || []);
         teachers = t || [];
         allUsers = u || [];
         schools = sc || [];
@@ -2558,7 +2576,7 @@ const actions = {
           api.get('/api/certificates')
         ]);
         const [s, t, u, lb, c] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
-        schedules = s || [];
+        schedules = this.normalizeSchedules(s || []);
         teachers = t || [];
         allUsers = u || [];
         stats = {
@@ -2576,7 +2594,7 @@ const actions = {
           api.get('/api/certificates')
         ]);
         const [s, lb, c] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
-        schedules = s || [];
+        schedules = this.normalizeSchedules(s || []);
         allUsers = [];
         labBookings = lb || [];
         certificates = c || [];
