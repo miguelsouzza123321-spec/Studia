@@ -54,6 +54,37 @@ const transformKeys = (obj: any): any => {
   return obj;
 };
 
+// Security: Sanitização de entrada
+const sanitizeString = (str: string): string => {
+  if (!str) return '';
+  return str.trim().replace(/[<>\"']/g, '').substring(0, 255);
+};
+
+const sanitizeEmail = (email: string): string => {
+  if (!email) return '';
+  return email.trim().toLowerCase();
+};
+
+// Security: Rate-limiting em-memória
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+
+const checkRateLimit = (key: string, maxRequests: number = 5, windowMs: number = 60000): boolean => {
+  const now = Date.now();
+  const entry = rateLimitMap.get(key);
+
+  if (!entry || now > entry.resetTime) {
+    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs });
+    return true;
+  }
+
+  if (entry.count >= maxRequests) {
+    return false;
+  }
+
+  entry.count++;
+  return true;
+};
+
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
@@ -65,7 +96,19 @@ app.use(express.json({ limit: '10mb' }));
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { email, password, displayName, subject, school_id, role } = req.body;
+    let { email, password, displayName, subject, school_id, role } = req.body;
+
+    // Sanitizar entrada
+    email = sanitizeEmail(email);
+    displayName = sanitizeString(displayName);
+    subject = sanitizeString(subject);
+    role = sanitizeString(role);
+
+    // Rate-limit: máx 3 registros por minuto por IP
+    const ip = req.ip || 'unknown';
+    if (!checkRateLimit(`register:${ip}`, 3, 60000)) {
+      return res.status(429).json({ error: 'Muitos registros. Tente novamente mais tarde.' });
+    }
 
     // Validação de campos obrigatórios
     if (!email || !password || !displayName) {
@@ -142,7 +185,14 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
-  const { email, password } = req.body;
+  let { email, password } = req.body;
+  email = sanitizeEmail(email);
+
+  // Rate-limit: máx 5 tentativas por minuto por email
+  if (!checkRateLimit(`login:${email}`, 5, 60000)) {
+    return res.status(429).json({ error: 'Muitas tentativas de login. Tente novamente em 1 minuto.' });
+  }
+
   const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
   if (authError || !authData.user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
@@ -190,8 +240,20 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.post('/api/users/create', async (req, res) => {
-  const { email, password, displayName, subject, role, schoolId } = req.body;
+  let { email, password, displayName, subject, role, schoolId } = req.body;
   const { userRole, userSchoolId } = req.body; // Quem está criando (extraído do JWT/session)
+
+  // Sanitizar entrada
+  email = sanitizeEmail(email);
+  displayName = sanitizeString(displayName);
+  subject = sanitizeString(subject);
+  role = sanitizeString(role);
+
+  // Rate-limit: máx 10 criações por minuto por IP
+  const ip = req.ip || 'unknown';
+  if (!checkRateLimit(`createUser:${ip}`, 10, 60000)) {
+    return res.status(429).json({ error: 'Muitas criações de usuário. Tente novamente mais tarde.' });
+  }
 
   if (!email || !password || !displayName || !role) {
     return res.status(400).json({ error: 'Email, senha, nome e cargo são obrigatórios' });
@@ -286,12 +348,28 @@ app.post('/api/users/create', async (req, res) => {
 });
 
 app.get('/api/schedules', async (req, res) => {
+  // Server-side permission validation
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
   let query = supabase.from('schedules').select('*');
+
   if (req.query.teacherId) {
+    // Se é um professor, só pode ver seus próprios horários
+    if (userInfo.role === 'teacher' && req.query.teacherId !== userInfo.uid) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
     query = query.eq('teacherid', req.query.teacherId);
   } else if (req.query.schoolId) {
+    // Se é um diretor, só pode ver sua própria escola
+    if (userInfo.role === 'diretor' && req.query.schoolId !== userInfo.school_id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
     query = query.eq('school_id', req.query.schoolId);
   }
+
   query = query.order('date', { ascending: true }).order('starttime', { ascending: true });
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar horários' });
@@ -350,17 +428,46 @@ app.get('/api/stats', async (_req, res) => {
   res.json({ total: data.length, confirmed: data.filter(item => item.status === 'confirmed').length, absent: data.filter(item => item.status === 'absent').length, pending: data.filter(item => item.status === 'pending').length });
 });
 
-app.get('/api/teachers', async (_req, res) => {
-  const { data, error } = await supabase.from('users').select('*').eq('role', 'teacher');
+app.get('/api/teachers', async (req, res) => {
+  // Server-side permission validation
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) {
+    return res.status(401).json({ error: 'Não autorizado' });
+  }
+
+  let query = supabase.from('users').select('*').eq('role', 'teacher');
+
+  // Diretor só vê professores da sua escola
+  if (userInfo.role === 'diretor') {
+    query = query.eq('school_id', userInfo.school_id);
+  }
+
+  query = query.order('displayname', { ascending: true });
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar professores' });
   res.json(transformKeys(data));
 });
 
 app.get('/api/users', async (req, res) => {
-  let query = supabase.from('users').select('*').order('displayname', { ascending: true });
-  if (req.query.schoolId) {
-    query = query.eq('school_id', req.query.schoolId);
+  // Server-side permission validation
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) {
+    return res.status(401).json({ error: 'Não autorizado' });
   }
+
+  let query = supabase.from('users').select('*').order('displayname', { ascending: true });
+
+  if (req.query.schoolId) {
+    // Diretor só pode ver usuários da sua própria escola
+    if (userInfo.role === 'diretor' && req.query.schoolId !== userInfo.school_id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    query = query.eq('school_id', req.query.schoolId);
+  } else if (userInfo.role === 'diretor') {
+    // Se é diretor e não passou schoolId, filtrar por sua escola
+    query = query.eq('school_id', userInfo.school_id);
+  }
+
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar usuários' });
   res.json(transformKeys(data));
@@ -381,6 +488,49 @@ app.delete('/api/users/:uid', async (req, res) => {
 
   res.json({ status: 'success' });
 });
+
+// Server-side permission validation
+interface UserInfo {
+  uid: string;
+  role: 'teacher' | 'diretor' | 'admin';
+  school_id?: string;
+}
+
+const getUserFromDB = async (uid: string): Promise<UserInfo | null> => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('uid,role,school_id')
+    .eq('uid', uid)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[PERMISSION] Error fetching user:', error);
+    return null;
+  }
+
+  return data as UserInfo | null;
+};
+
+const validateUserPermission = async (req: any, requiredRole?: string[]): Promise<UserInfo | null> => {
+  const userId = req.headers['x-user-id'] as string;
+
+  if (!userId) {
+    return null; // Sem UID = sem permissão
+  }
+
+  const userInfo = await getUserFromDB(userId);
+
+  if (!userInfo) {
+    return null; // Usuário não encontrado
+  }
+
+  // Se role específica é requerida, validar
+  if (requiredRole && !requiredRole.includes(userInfo.role)) {
+    return null; // Usuário não tem a role necessária
+  }
+
+  return userInfo;
+};
 
 const VALID_ROLES = ['teacher', 'diretor', 'admin'];
 

@@ -246,12 +246,15 @@ const api = {
     let fullUrl = getApiUrl(url);
     let res;
     try {
+      const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      };
+      if (user?.uid) headers['X-User-ID'] = user.uid;
+
       res = await fetch(fullUrl, {
         ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
       });
     } catch (fetchErr) {
       console.error("Fetch error on primary URL:", fetchErr);
