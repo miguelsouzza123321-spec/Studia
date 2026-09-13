@@ -134,7 +134,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(500).json({ error: `Erro ao atualizar escola: ${updateError.message}` });
     }
 
-    res.json(userData);
+    res.json(transformKeys(userData));
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Erro interno ao registrar' });
@@ -166,7 +166,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     console.log('[LOGIN] User found, role:', userData.role);
-    res.json(userData);
+    res.json(transformKeys(userData));
   } catch (err) {
     console.error('[LOGIN] Fallback to fetch:', err.message);
     // Fallback: usar fetch direto sem select=*
@@ -185,7 +185,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     const data = await response.json();
     if (!data || data.length === 0) return res.status(401).json({ error: 'Credenciais inválidas' });
-    res.json(data[0]);
+    res.json(transformKeys(data[0]));
   }
 });
 
@@ -278,7 +278,7 @@ app.post('/api/users/create', async (req, res) => {
       // Não falha - continua sem school_id
     }
 
-    res.json(userData || { uid, email, displayname: displayName, role, school_id: finalSchoolId });
+    res.json(transformKeys(userData || { uid, email, displayname: displayName, role, school_id: finalSchoolId }));
   } catch (err) {
     console.error('[CREATE_USER] Error:', err);
     res.status(500).json({ error: 'Erro ao criar usuário' });
@@ -352,7 +352,7 @@ app.get('/api/stats', async (_req, res) => {
 app.get('/api/teachers', async (_req, res) => {
   const { data, error } = await supabase.from('users').select('*').eq('role', 'teacher');
   if (error) return res.status(500).json({ error: 'Erro ao buscar professores' });
-  res.json(data);
+  res.json(transformKeys(data));
 });
 
 app.get('/api/users', async (req, res) => {
@@ -362,7 +362,7 @@ app.get('/api/users', async (req, res) => {
   }
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar usuários' });
-  res.json(data);
+  res.json(transformKeys(data));
 });
 
 app.delete('/api/users/:uid', async (req, res) => {
@@ -397,13 +397,13 @@ app.patch('/api/users/:uid/role', async (req, res) => {
     .single();
 
   if (error) return res.status(500).json({ error: 'Erro ao atualizar perfil do usuário' });
-  res.json(data);
+  res.json(transformKeys(data));
 });
 
 app.get('/api/labs/bookings', async (_req, res) => {
   const { data, error } = await supabase.from('lab_bookings').select('*').order('date', { ascending: false }).order('starttime', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar reservas' });
-  res.json(data);
+  res.json(transformKeys(data));
 });
 
 app.post('/api/labs/bookings', async (req, res) => {
