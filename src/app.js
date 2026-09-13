@@ -645,123 +645,190 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
 // --- VIEWS ---
 
 const LandingView = () => `
-  <div class="landing-page min-h-screen flex flex-col text-slate-800 font-sans">
-    <nav class="landing-nav h-16 flex items-center justify-between px-6 md:px-10 shrink-0">
-      <div class="flex items-center">
-        ${Logo(150, 40)}
-      </div>
-      <button onclick="actions.showLoginModal('login')" class="landing-nav-button px-5 py-2.5 rounded-lg font-bold text-sm transition-all">
-        Entrar no Sistema
-      </button>
+  <div style="margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%); color: #0f172a; overflow-x: hidden;">
+    <style>
+      .landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); position: fixed; width: 100%; top: 0; z-index: 1000; box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05); }
+      .landing-logo { font-size: 1.8rem; font-weight: 900; color: #2E5077; display: flex; align-items: center; gap: 0.5rem; }
+      .landing-nav-links { display: flex; gap: 2.5rem; list-style: none; }
+      .landing-nav-links a { text-decoration: none; color: #0f172a; font-weight: 500; transition: color 0.3s; cursor: pointer; }
+      .landing-nav-links a:hover { color: #5B99C2; }
+      .landing-cta-btn { background: #2E5077; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: none; cursor: pointer; }
+      .landing-cta-btn:hover { background: #1e40af; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(46, 80, 119, 0.2); }
+      .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; }
+      .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; color: #2E5077; animation: slideInLeft 0.8s ease-out; }
+      .landing-hero-content p { font-size: 1.2rem; color: #64748b; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
+      .landing-hero-buttons { display: flex; gap: 1.5rem; animation: slideInLeft 0.8s ease-out 0.4s backwards; }
+      .landing-hero-buttons .landing-cta-btn { padding: 1rem 2rem; font-size: 1.1rem; }
+      .landing-secondary-btn { background: transparent; color: #2E5077; border: 2px solid #2E5077; }
+      .landing-secondary-btn:hover { background: #2E5077; color: white; }
+      .landing-hero-visual { position: relative; height: 400px; animation: float 3s ease-in-out infinite; }
+      .landing-cube { width: 300px; height: 300px; position: relative; margin: auto; transform-style: preserve-3d; animation: rotateCube 20s infinite linear; }
+      .landing-cube-face { position: absolute; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: white; opacity: 0.9; border: 2px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); }
+      .landing-front  { background: linear-gradient(135deg, #2E5077, #5B99C2); transform: translateZ(150px); }
+      .landing-back   { background: linear-gradient(135deg, #5B99C2, #2E5077); transform: rotateY(180deg) translateZ(150px); }
+      .landing-right  { background: linear-gradient(135deg, #1e40af, #2E5077); transform: rotateY(90deg) translateZ(150px); }
+      .landing-left   { background: linear-gradient(135deg, #2E5077, #1e40af); transform: rotateY(-90deg) translateZ(150px); }
+      .landing-top    { background: linear-gradient(135deg, #5B99C2, #1e40af); transform: rotateX(90deg) translateZ(150px); }
+      .landing-bottom { background: linear-gradient(135deg, #1e40af, #5B99C2); transform: rotateX(-90deg) translateZ(150px); }
+      .landing-features { padding: 100px 5%; background: white; }
+      .landing-section-title { text-align: center; font-size: 2.5rem; color: #2E5077; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
+      .landing-feature-card { padding: 2rem; background: linear-gradient(135deg, rgba(46, 80, 119, 0.05), rgba(91, 153, 194, 0.05)); border-radius: 12px; border: 1px solid rgba(46, 80, 119, 0.1); transition: all 0.3s; animation: fadeInUp 0.8s ease-out; }
+      .landing-feature-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(46, 80, 119, 0.1); border-color: #5B99C2; }
+      .landing-feature-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #2E5077, #5B99C2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1rem; color: white; }
+      .landing-feature-card h3 { color: #2E5077; margin-bottom: 1rem; font-size: 1.3rem; }
+      .landing-feature-card p { color: #64748b; line-height: 1.6; }
+      .landing-benefits { padding: 100px 5%; background: linear-gradient(135deg, #2E5077, #1e40af); color: white; }
+      .landing-benefits-content { max-width: 900px; margin: 0 auto; }
+      .landing-benefits h2 { font-size: 2.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-benefit-item { display: flex; gap: 1.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-benefit-check { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; }
+      .landing-benefit-item p { font-size: 1.1rem; line-height: 1.6; }
+      .landing-contact { padding: 100px 5%; background: white; text-align: center; }
+      .landing-contact h2 { font-size: 2.5rem; color: #2E5077; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-contact p { font-size: 1.2rem; color: #64748b; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s backwards; }
+      .landing-contact-form { max-width: 600px; margin: 0 auto; animation: fadeInUp 0.8s ease-out 0.4s backwards; }
+      .landing-form-group { margin-bottom: 1.5rem; text-align: left; }
+      .landing-form-group label { display: block; margin-bottom: 0.5rem; color: #2E5077; font-weight: 600; }
+      .landing-form-group input, .landing-form-group textarea { width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; font-family: inherit; transition: all 0.3s; }
+      .landing-form-group input:focus, .landing-form-group textarea:focus { outline: none; border-color: #5B99C2; box-shadow: 0 0 0 3px rgba(91, 153, 194, 0.1); }
+      .landing-form-group textarea { resize: vertical; min-height: 120px; }
+      .landing-submit-btn { width: 100%; padding: 1rem; background: #2E5077; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+      .landing-submit-btn:hover { background: #1e40af; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(46, 80, 119, 0.2); }
+      .landing-footer { padding: 2rem 5%; background: #0f172a; color: white; text-align: center; }
+      @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
+      @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
+      @keyframes rotateCube { 0% { transform: rotateX(0deg) rotateY(0deg); } 100% { transform: rotateX(360deg) rotateY(360deg); } }
+      @media (max-width: 768px) {
+        .landing-nav-links { display: none; }
+        .landing-hero { grid-template-columns: 1fr; padding: 60px 5% 40px; }
+        .landing-hero-content h1 { font-size: 2rem; }
+        .landing-hero-visual { height: 250px; }
+        .landing-cube { width: 200px; height: 200px; }
+        .landing-cube-face { width: 200px; height: 200px; }
+      }
+    </style>
+
+    <nav class="landing-nav">
+      <div class="landing-logo">🎓 Studia</div>
+      <ul class="landing-nav-links">
+        <li><a onclick="document.getElementById('features-section').scrollIntoView({behavior:'smooth'})">Funcionalidades</a></li>
+        <li><a onclick="document.getElementById('benefits-section').scrollIntoView({behavior:'smooth'})">Benefícios</a></li>
+        <li><a onclick="document.getElementById('contact-section').scrollIntoView({behavior:'smooth'})">Contato</a></li>
+      </ul>
+      <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Entrar</button>
     </nav>
 
-    <main class="flex-1">
-      <section class="landing-hero relative overflow-hidden">
-        <div class="landing-grid absolute inset-0"></div>
-        <div class="landing-orbit landing-orbit-one"></div>
-        <div class="landing-orbit landing-orbit-two"></div>
-        <div class="relative max-w-7xl mx-auto px-6 py-14 md:px-10 md:py-24">
-          <div class="grid lg:grid-cols-[1.2fr_0.8fr] items-center gap-12">
-            <div class="landing-copy text-left">
-              <span class="landing-eyebrow inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em]">
-                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> SaaS escolar inteligente
-              </span>
-              <h1 class="mt-6 text-5xl md:text-6xl xl:text-7xl font-black leading-[0.95] tracking-[-0.06em] text-slate-900">
-                Gestão escolar
-                <span class="landing-title-accent block">mais rápida, clara e inteligente.</span>
-              </h1>
-              <p class="landing-description mt-6 max-w-xl text-lg leading-relaxed">
-                Centralize horários, controle presença de professores, reserve laboratórios e acompanhe a rotina escolar em uma plataforma moderna feita para direção e corpo docente.
-              </p>
-              <div class="mt-8 flex flex-col sm:flex-row gap-4">
-                <button onclick="actions.showLoginModal('register')" class="landing-primary-button px-8 py-4 rounded-2xl font-bold text-base transition-all">
-                  Criar conta
-                </button>
-                <button onclick="actions.showLoginModal('login')" class="landing-secondary-button px-8 py-4 rounded-2xl font-bold text-base transition-all">
-                  Acessar painel
-                </button>
-              </div>
-              <div class="landing-proof mt-10 flex flex-wrap items-center gap-6 text-xs font-bold uppercase tracking-[0.2em]">
-                <span>+1.200 aulas</span>
-                <span>+40 escolas</span>
-                <span>99,9% uptime</span>
-              </div>
-            </div>
-
-            <div class="landing-dashboard-wrap relative">
-              <div class="landing-dashboard-glow absolute -inset-6 rounded-[2.5rem]"></div>
-              <div class="landing-dashboard relative rounded-[2rem] p-6 ring-1 ring-slate-200 shadow-xl">
-                <div class="flex items-center justify-between pb-4 border-b border-slate-200">
-                  <div>
-                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Dashboard</p>
-                    <h3 class="mt-1 text-xl font-black text-slate-900">Painel escolar</h3>
-                  </div>
-                  <span class="rounded-full bg-emerald-50 text-emerald-700 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide">Online</span>
-                </div>
-
-                <div class="mt-6 grid grid-cols-2 gap-4">
-                  <div class="rounded-2xl bg-blue-50 border border-blue-100 p-4">
-                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-blue-600">Horários</p>
-                    <p class="mt-2 text-3xl font-black text-slate-900">184</p>
-                    <p class="mt-1 text-xs text-slate-500">Aulas cadastradas</p>
-                  </div>
-                  <div class="rounded-2xl bg-slate-100 border border-slate-200 p-4">
-                    <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-500">Professores</p>
-                    <p class="mt-2 text-3xl font-black text-slate-900">26</p>
-                    <p class="mt-1 text-xs text-slate-500">Ativos no sistema</p>
-                  </div>
-                </div>
-
-                <div class="mt-6 rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                  <div class="flex items-center justify-between mb-3">
-                    <p class="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Status do mês</p>
-                    <p class="text-xs font-bold text-emerald-600">+18,4%</p>
-                  </div>
-                  <div class="space-y-3">
-                    <div>
-                      <div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>Presença</span><span>86%</span></div>
-                      <div class="h-2 bg-slate-200 rounded-full"><div class="h-2 bg-emerald-500 rounded-full" style="width:86%"></div></div>
-                    </div>
-                    <div>
-                      <div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>Laboratórios</span><span>74%</span></div>
-                      <div class="h-2 bg-slate-200 rounded-full"><div class="h-2 bg-blue-500 rounded-full" style="width:74%"></div></div>
-                    </div>
-                    <div>
-                      <div class="flex justify-between text-xs font-bold text-slate-600 mb-1"><span>Atestados</span><span>91%</span></div>
-                      <div class="h-2 bg-slate-200 rounded-full"><div class="h-2 bg-violet-500 rounded-full" style="width:91%"></div></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+    <section class="landing-hero">
+      <div class="landing-hero-content">
+        <h1>Gestão Escolar Completa e Inteligente</h1>
+        <p>Sistema digital que centraliza horários, laboratórios e presença em uma plataforma segura e profissional para sua escola.</p>
+        <div class="landing-hero-buttons">
+          <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Agende uma Demo</button>
+          <button onclick="actions.showLoginModal('login')" class="landing-cta-btn landing-secondary-btn">Testar Agora</button>
         </div>
-      </section>
-
-      <section class="max-w-7xl mx-auto px-6 pb-16 md:pb-24">
-        <div class="grid md:grid-cols-3 gap-6 items-stretch">
-          <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 mb-4"><i data-lucide="calendar-check" class="w-5 h-5"></i></div>
-            <h3 class="text-xl font-black text-slate-900">Planejamento inteligente</h3>
-            <p class="mt-3 text-sm text-slate-600 leading-relaxed">Organize a grade escolar em poucos minutos e tenha visão real do que foi confirmado, pendente ou liberado.</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600 mb-4"><i data-lucide="beaker" class="w-5 h-5"></i></div>
-            <h3 class="text-xl font-black text-slate-900">Laboratórios controlados</h3>
-            <p class="mt-3 text-sm text-slate-600 leading-relaxed">Reserve salas com eficiência e evite conflitos de uso entre disciplinas e turmas.</p>
-          </div>
-          <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow">
-            <div class="w-12 h-12 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600 mb-4"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
-            <h3 class="text-xl font-black text-slate-900">Acesso seguro</h3>
-            <p class="mt-3 text-sm text-slate-600 leading-relaxed">Administradores, diretores e professores têm perfis e permissões claros, com gestão centralizada de acessos.</p>
-          </div>
+      </div>
+      <div class="landing-hero-visual">
+        <div class="landing-cube">
+          <div class="landing-cube-face landing-front">📚</div>
+          <div class="landing-cube-face landing-back">🔒</div>
+          <div class="landing-cube-face landing-right">⚡</div>
+          <div class="landing-cube-face landing-left">📊</div>
+          <div class="landing-cube-face landing-top">🎯</div>
+          <div class="landing-cube-face landing-bottom">✨</div>
         </div>
-      </section>
-    </main>
+      </div>
+    </section>
 
-    <footer class="landing-nav border-t border-slate-100 px-6 md:px-10 py-6 text-xs text-slate-400 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <span>© ${new Date().getFullYear()} Studia — Grade Escolar Digital</span>
-      <span>Feito para direção, diretores e professores.</span>
+    <section class="landing-features" id="features-section">
+      <h2 class="landing-section-title">Funcionalidades Principais</h2>
+      <div class="landing-features-grid">
+        <div class="landing-feature-card">
+          <div class="landing-feature-icon">📅</div>
+          <h3>Grade Horária Digital</h3>
+          <p>Organize e compartilhe horários de aulas com professores e alunos em tempo real.</p>
+        </div>
+        <div class="landing-feature-card">
+          <div class="landing-feature-icon">🔬</div>
+          <h3>Gerenciamento de Laboratórios</h3>
+          <p>Reserve e controle o uso dos laboratórios de forma simples e eficiente.</p>
+        </div>
+        <div class="landing-feature-card">
+          <div class="landing-feature-icon">📋</div>
+          <h3>Atestados Médicos</h3>
+          <p>Receba e aprove atestados de forma digital, reduzindo burocracias.</p>
+        </div>
+        <div class="landing-feature-card">
+          <div class="landing-feature-icon">👥</div>
+          <h3>Gestão de Usuários</h3>
+          <p>Crie e gerencie contas de professores, diretores e alunos facilmente.</p>
+        </div>
+        <div class="landing-feature-card">
+          <div class="landing-feature-icon">📊</div>
+          <h3>Relatórios Detalhados</h3>
+          <p>Gere relatórios completos sobre frequência e atividades escolares.</p>
+        </div>
+        <div class="landing-feature-card">
+          <div class="landing-feature-icon">🔒</div>
+          <h3>Segurança em Primeiro Lugar</h3>
+          <p>Dados criptografados e acesso controlado por função e escola.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-benefits" id="benefits-section">
+      <div class="landing-benefits-content">
+        <h2>Por que escolher Studia?</h2>
+        <div class="landing-benefit-item">
+          <div class="landing-benefit-check">✓</div>
+          <p><strong>Aumenta Eficiência:</strong> Reduz tarefas administrativas em até 70%, liberando tempo para o que importa.</p>
+        </div>
+        <div class="landing-benefit-item">
+          <div class="landing-benefit-check">✓</div>
+          <p><strong>Melhora Comunicação:</strong> Mantém professores, diretores e pais na mesma página com atualizações em tempo real.</p>
+        </div>
+        <div class="landing-benefit-item">
+          <div class="landing-benefit-check">✓</div>
+          <p><strong>Reduz Custos:</strong> Elimina papel, telefones e reuniões desnecessárias com um sistema centralizado.</p>
+        </div>
+        <div class="landing-benefit-item">
+          <div class="landing-benefit-check">✓</div>
+          <p><strong>Segurança de Dados:</strong> Protege informações sensíveis com criptografia de nível empresarial.</p>
+        </div>
+        <div class="landing-benefit-item">
+          <div class="landing-benefit-check">✓</div>
+          <p><strong>Suporte Dedicado:</strong> Equipe técnica pronta para ajudar sua escola 24/7.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="landing-contact" id="contact-section">
+      <h2>Entre em Contato Conosco</h2>
+      <p>Transforme a gestão da sua escola. Deixe seus dados e falaremos em breve.</p>
+      <form class="landing-contact-form" onsubmit="actions.submitContact(event)">
+        <div class="landing-form-group">
+          <label for="landing-name">Nome da Escola</label>
+          <input type="text" id="landing-name" name="name" required>
+        </div>
+        <div class="landing-form-group">
+          <label for="landing-contact">Seu Email</label>
+          <input type="email" id="landing-contact" name="contact" required>
+        </div>
+        <div class="landing-form-group">
+          <label for="landing-phone">Telefone</label>
+          <input type="tel" id="landing-phone" name="phone">
+        </div>
+        <div class="landing-form-group">
+          <label for="landing-message">Mensagem</label>
+          <textarea id="landing-message" name="message" required></textarea>
+        </div>
+        <button type="submit" class="landing-submit-btn">Enviar Mensagem</button>
+      </form>
+    </section>
+
+    <footer class="landing-footer">
+      <p>&copy; ${new Date().getFullYear()} Studia - Sistema de Gestão Escolar Digital. Todos os direitos reservados.</p>
     </footer>
 
     <!-- Login/Register Modal -->
@@ -778,7 +845,7 @@ const LandingView = () => `
 
         <h3 class="text-2xl font-bold mb-2">${authMode === 'login' ? 'Bem-vindo de volta' : 'Nova conta Studia'}</h3>
         <p class="text-slate-500 text-sm mb-6 font-medium">${authMode === 'login' ? 'Acesse seu painel administrativo.' : 'Crie sua conta de professor.'}</p>
-        
+
         <div class="space-y-4">
           ${authMode === 'register' ? `
             <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm">
@@ -2391,6 +2458,19 @@ const actions = {
   toggleAuthMode(mode) {
     authMode = mode;
     this.init();
+  },
+
+  submitContact(event) {
+    event.preventDefault();
+    const name = document.getElementById('landing-name')?.value;
+    const contact = document.getElementById('landing-contact')?.value;
+    const phone = document.getElementById('landing-phone')?.value;
+    const message = document.getElementById('landing-message')?.value;
+
+    if (name && contact && message) {
+      showDialog(`Obrigado ${name}! Recebemos sua mensagem. Entraremos em contato em breve!`);
+      event.target.reset();
+    }
   },
 
   showCreateModal() {
