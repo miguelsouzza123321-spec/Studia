@@ -28,6 +28,32 @@ const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
+// Mapeamento de colunas do banco para camelCase
+const columnMap: {[key: string]: string} = {
+  starttime: 'startTime',
+  endtime: 'endTime',
+  teacherid: 'teacherId',
+  teachername: 'teacherName',
+  classgroup: 'classGroup',
+  labid: 'labId',
+  displayname: 'displayName',
+  school_id: 'schoolId',
+  createdat: 'createdAt',
+  updatedat: 'updatedAt'
+};
+
+const transformKeys = (obj: any): any => {
+  if (Array.isArray(obj)) return obj.map(transformKeys);
+  if (obj && typeof obj === 'object') {
+    return Object.keys(obj).reduce((acc: any, key) => {
+      const newKey = columnMap[key] || key;
+      acc[newKey] = obj[key];
+      return acc;
+    }, {});
+  }
+  return obj;
+};
+
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
@@ -268,7 +294,7 @@ app.get('/api/schedules', async (req, res) => {
   }
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar horários' });
-  res.json(data);
+  res.json(transformKeys(data));
 });
 
 app.post('/api/schedules', async (req, res) => {
@@ -399,9 +425,9 @@ app.delete('/api/labs/bookings-clear-all', async (_req, res) => {
 });
 
 app.get('/api/certificates', async (_req, res) => {
-  const { data, error } = await supabase.from('certificates').select('id,teacherId,teacherName,date,reason,status,createdAt').order('createdAt', { ascending: false });
+  const { data, error } = await supabase.from('certificates').select('*').order('createdat', { ascending: false });
   if (error) return res.status(500).json({ error: 'Erro ao buscar certificados' });
-  res.json(data);
+  res.json(transformKeys(data));
 });
 
 app.get('/api/certificates/:id/image', async (req, res) => {

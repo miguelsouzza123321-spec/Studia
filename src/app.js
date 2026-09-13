@@ -926,7 +926,7 @@ const TeacherView = () => {
               <div class="flex justify-center">
                 <div class="w-full max-w-2xl overflow-x-auto pb-4 scrollbar-none">
                   <div class="min-w-[550px]">
-                    ${TeacherScheduleCard(user, schedules, slots)}
+                    ${TeacherScheduleCard(user, schedules.filter(s => s.teacherId === user.uid), slots)}
                   </div>
                 </div>
               </div>
@@ -2168,6 +2168,15 @@ const RelatoriosTab = () => {
               .map(s => s.classGroup)
             )].sort();
 
+            console.log('=== DEBUG RELATÓRIO TURMAS ===');
+            console.log('schedules total:', schedules.length);
+            console.log('filteredSchedules:', filteredSchedules.length);
+            console.log('reportWeek:', reportWeek);
+            console.log('reportTurno:', reportTurno);
+            if (filteredSchedules.length > 0) {
+              console.log('Sample schedule:', filteredSchedules[0]);
+              console.log('classGroup values:', filteredSchedules.map(s => s.classGroup).filter(Boolean));
+            }
             console.log('[DEBUG TURMAS GRID]', {
               filteredSchedulesCount: filteredSchedules.length,
               allTurmasCount: allTurmas.length,
@@ -2571,20 +2580,26 @@ const actions = {
 
   normalizeSchedules(schedules) {
     // Convert snake_case from API to camelCase for frontend
-    return schedules.map(s => ({
-      id: s.id,
-      date: s.date,
-      startTime: s.starttime || s.startTime,
-      endTime: s.endtime || s.endTime,
-      subject: s.subject,
-      room: s.room,
-      teacherId: s.teacherid || s.teacherId,
-      teacherName: s.teachername || s.teacherName,
-      classGroup: s.classgroup || s.classGroup,
-      status: s.status,
-      school_id: s.school_id,
-      createdAt: s.createdat || s.createdAt
-    }));
+    return schedules.map(s => {
+      const classGroup = s.classgroup || s.classGroup || 'SEM_TURMA';
+      if (!classGroup || classGroup.trim() === '') {
+        console.warn('[WARN] Schedule sem classGroup:', s);
+      }
+      return {
+        id: s.id,
+        date: s.date,
+        startTime: s.starttime || s.startTime,
+        endTime: s.endtime || s.endTime,
+        subject: s.subject,
+        room: s.room,
+        teacherId: s.teacherid || s.teacherId,
+        teacherName: s.teachername || s.teacherName,
+        classGroup: classGroup,
+        status: s.status,
+        school_id: s.school_id,
+        createdAt: s.createdat || s.createdAt
+      };
+    });
   },
 
   async refreshData() {
