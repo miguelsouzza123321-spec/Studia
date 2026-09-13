@@ -2547,7 +2547,7 @@ const actions = {
     try {
       if (user.role === 'admin') {
         const results = await Promise.allSettled([
-          api.get('/api/schedules'),
+          api.get(`/api/schedules?schoolId=${user.school_id}`),
           api.get('/api/teachers'),
           api.get('/api/users'),
           api.get('/api/labs/bookings'),
@@ -2656,9 +2656,10 @@ const actions = {
       startTime: $('#form-start').value,
       endTime: $('#form-end').value,
       teacherId: teacherSelect.value,
-      teacherName: teacherSelect.options[teacherSelect.selectedIndex].text
+      teacherName: teacherSelect.options[teacherSelect.selectedIndex].text,
+      school_id: user.school_id
     };
-    
+
     try {
       await api.post('/api/schedules', data);
       this.hideCreateModal();
