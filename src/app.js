@@ -89,6 +89,7 @@ let reportCardSize = localStorage.getItem('reportCardSize') || 'medium'; // 'sma
 let teacherSchedulesTab = 'grid'; // 'grid' or 'list'
 let mobileMenuOpen = false;
 let createUserModalVisible = false;
+let isRefreshingData = false; // Flag para evitar múltiplas requisições simultâneas
 
 // --- API ---
 let apiBaseUrl = (localStorage.getItem('api_base_url') || '').trim();
@@ -2289,7 +2290,11 @@ const TAB_ACCESS = {
 const actions = {
   toggleMobileMenu(isOpen) {
     mobileMenuOpen = isOpen;
-    this.init();
+    // Para apenas atualizar o menu mobile sem recarregar dados
+    const mobileDrawer = $('#mobile-drawer');
+    if (mobileDrawer) {
+      mobileDrawer.classList.toggle('hidden', !isOpen);
+    }
   },
 
   switchTabMobile(tab) {
@@ -2297,6 +2302,28 @@ const actions = {
     currentTab = tab;
     mobileMenuOpen = false;
     this.init();
+  },
+
+  renderCurrentView() {
+    // Re-render apenas a view atual sem recarregar dados (otimização de performance)
+    try {
+      if (!user) {
+        render(LandingView());
+      } else {
+        if (user.role === 'admin') {
+          render(AdminView());
+        } else if (user.role === 'diretor') {
+          render(DiretorView());
+        } else {
+          render(TeacherView());
+        }
+      }
+      if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+      }
+    } catch (err) {
+      console.error('Render error:', err);
+    }
   },
 
   async init() {
@@ -2308,13 +2335,7 @@ const actions = {
           currentTab = 'horarios';
         }
         await this.refreshData();
-        if (user.role === 'admin') {
-          render(AdminView());
-        } else if (user.role === 'diretor') {
-          render(DiretorView());
-        } else {
-          render(TeacherView());
-        }
+        this.renderCurrentView();
       }
       if (typeof lucide !== 'undefined') {
         lucide.createIcons();
@@ -2543,7 +2564,8 @@ const actions = {
   },
 
   async refreshData() {
-    if (!user) return;
+    if (!user || isRefreshingData) return;
+    isRefreshingData = true;
     try {
       if (user.role === 'admin') {
         const results = await Promise.allSettled([
@@ -2601,6 +2623,8 @@ const actions = {
       }
     } catch (err) {
       console.error('Data refresh error:', err);
+    } finally {
+      isRefreshingData = false;
     }
   },
 
@@ -2842,23 +2866,23 @@ const actions = {
 
   setReportWeek(val) {
     reportWeek = val;
-    this.init();
+    this.renderCurrentView();
   },
 
   setReportTurno(val) {
     reportTurno = val;
-    this.init();
+    this.renderCurrentView();
   },
 
   setReportTeacher(val) {
     reportTeacher = val;
-    this.init();
+    this.renderCurrentView();
   },
 
   setReportCardSize(val) {
     reportCardSize = val;
     localStorage.setItem('reportCardSize', val);
-    this.init();
+    this.renderCurrentView();
   },
 
   setSchoolName(val) {
@@ -2872,18 +2896,18 @@ const actions = {
 
   setRelatorioSubTab(val) {
     currentRelatorioSubTab = val;
-    this.init();
+    this.renderCurrentView();
   },
 
   setReportModel(val) {
     reportModel = val;
-    this.init();
+    this.renderCurrentView();
   },
 
   setTeacherSchedulesTab(val) {
     if (val !== 'grid') return;
     teacherSchedulesTab = 'grid';
-    this.init();
+    this.renderCurrentView();
   },
 
   async downloadTeacherPDF() {
