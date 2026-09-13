@@ -711,7 +711,9 @@ const LandingView = () => `
     </style>
 
     <nav class="landing-nav">
-      <div class="landing-logo">🎓 Studia</div>
+      <div class="landing-logo" style="font-size: 0;">
+        ${Logo(120, 35)}
+      </div>
       <ul class="landing-nav-links">
         <li><a onclick="document.getElementById('features-section').scrollIntoView({behavior:'smooth'})">Funcionalidades</a></li>
         <li><a onclick="document.getElementById('benefits-section').scrollIntoView({behavior:'smooth'})">Benefícios</a></li>
@@ -804,32 +806,39 @@ const LandingView = () => `
     </section>
 
     <section class="landing-contact" id="contact-section">
-      <h2>Entre em Contato Conosco</h2>
-      <p>Transforme a gestão da sua escola. Deixe seus dados e falaremos em breve.</p>
-      <form class="landing-contact-form" onsubmit="actions.submitContact(event)">
-        <div class="landing-form-group">
-          <label for="landing-name">Nome da Escola</label>
-          <input type="text" id="landing-name" name="name" required>
-        </div>
-        <div class="landing-form-group">
-          <label for="landing-contact">Seu Email</label>
-          <input type="email" id="landing-contact" name="contact" required>
-        </div>
-        <div class="landing-form-group">
-          <label for="landing-phone">Telefone</label>
-          <input type="tel" id="landing-phone" name="phone">
-        </div>
-        <div class="landing-form-group">
-          <label for="landing-message">Mensagem</label>
-          <textarea id="landing-message" name="message" required></textarea>
-        </div>
-        <button type="submit" class="landing-submit-btn">Enviar Mensagem</button>
-      </form>
+      <h2>Pronto para transformar sua escola?</h2>
+      <p style="margin-bottom: 2rem;">Fale conosco pelo WhatsApp e conheça como Studia pode ajudar sua instituição.</p>
+      <a href="https://wa.me/5541987654321?text=Olá! Gostaria de conhecer mais sobre o Studia" target="_blank" style="display: inline-block; background: #25D366; color: white; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.1rem; transition: all 0.3s; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3);" onmouseover="this.style.background='#20BA5A'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#25D366'; this.style.transform='translateY(0)';">
+        💬 Fale conosco no WhatsApp
+      </a>
     </section>
 
     <footer class="landing-footer">
       <p>&copy; ${new Date().getFullYear()} Studia - Sistema de Gestão Escolar Digital. Todos os direitos reservados.</p>
     </footer>
+
+    <script>
+      // Animações ao scroll com Intersection Observer
+      const observerOptions = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+            observer.unobserve(entry.target);
+          }
+        });
+      }, observerOptions);
+
+      setTimeout(() => {
+        document.querySelectorAll('.landing-feature-card, .landing-benefit-item, .landing-contact').forEach(el => {
+          el.style.opacity = '0';
+          el.style.transform = 'translateY(30px)';
+          el.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+          observer.observe(el);
+        });
+      }, 100);
+    </script>
 
     <!-- Login/Register Modal -->
     <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 ${authMode === 'closed' ? 'hidden' : ''}">
