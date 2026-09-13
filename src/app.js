@@ -629,7 +629,7 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
                 }
                 return `
                   <td class="py-0.5 align-middle leading-tight truncate">
-                    <div class="font-black text-slate-900 ${tdTitleSize} truncate">${cell.teacherName.split(' ')[0]}</div>
+                    <div class="font-black text-slate-900 ${tdTitleSize} truncate">${cell.teacherName}</div>
                     <div class="text-slate-400 font-extrabold truncate uppercase mt-0.5 ${tdSubSize}">${cell.subject}</div>
                   </td>
                 `;
