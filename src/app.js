@@ -409,7 +409,9 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
     const d = parseLocalDate(s.date);
     const dayNum = getDayOfWeek(d);
     const dayName = dayNum >= 1 && dayNum <= 5 ? days[dayNum - 1] : null;
-    if (dayName && grid[s.startTime]) {
+    // Remove seconds from startTime for grid key lookup (API returns HH:MM:SS but grid keys are HH:MM)
+    const startTimeKey = s.startTime?.substring(0, 5) || s.startTime;
+    if (dayName && grid[startTimeKey]) {
       // Show on the grid if the schedule is confirmed or pending, OR if it's already a vacant slot (vaga) or HAF
       if (s.status !== 'confirmed' && s.status !== 'pending' && s.status !== 'vaga' && s.subject?.toUpperCase() !== 'HAF') {
         return;
@@ -429,12 +431,12 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
         const isDifferentSubject = s.subject && teacher.subject && s.subject.trim().toLowerCase() !== teacher.subject.trim().toLowerCase();
         cellText = (s.classGroup && isDifferentSubject) ? `${s.classGroup} - ${s.subject}` : (s.classGroup || s.subject || '------');
       }
-      
-      if (grid[s.startTime][dayName] === '------') {
-        grid[s.startTime][dayName] = cellText;
+
+      if (grid[startTimeKey][dayName] === '------') {
+        grid[startTimeKey][dayName] = cellText;
       } else {
-        if (!grid[s.startTime][dayName].split('/').includes(cellText)) {
-          grid[s.startTime][dayName] += '/' + cellText;
+        if (!grid[startTimeKey][dayName].split('/').includes(cellText)) {
+          grid[startTimeKey][dayName] += '/' + cellText;
         }
       }
     }
@@ -515,6 +517,8 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
 };
 
 const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
+  console.log(`[DEBUG TurmaScheduleCard] turmaName="${turmaName}", weekSchedules count=${weekSchedules.length}, slots=${slots.join(', ')}`);
+
   const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex'];
   const grid = {};
   slots.forEach(slot => {
@@ -523,17 +527,19 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
       grid[slot][day] = null;
     });
   });
-  
+
   weekSchedules.forEach(s => {
     const d = parseLocalDate(s.date);
     const dayNum = getDayOfWeek(d);
     const dayName = days[dayNum - 1];
-    if (dayName && grid[s.startTime]) {
+    // Remove seconds from startTime for grid key lookup (API returns HH:MM:SS but grid keys are HH:MM)
+    const startTimeKey = s.startTime?.substring(0, 5) || s.startTime;
+    if (dayName && grid[startTimeKey]) {
       // Show on the grid if the schedule is confirmed or pending, OR if it's already a vacant slot (vaga) or HAF
       if (s.status !== 'confirmed' && s.status !== 'pending' && s.status !== 'vaga' && s.subject?.toUpperCase() !== 'HAF') {
         return;
       }
-      grid[s.startTime][dayName] = {
+      grid[startTimeKey][dayName] = {
         teacherName: s.teacherName || '------',
         subject: s.subject || '------',
         status: s.status
@@ -1929,9 +1935,17 @@ const AtestadosTab = () => `
 
 
 const RelatoriosTab = () => {
+  // DEBUG LOGS
+  console.log('[DEBUG RELATÓRIO]', {
+    reportTurno,
+    reportWeek,
+    schedulesCount: schedules.length,
+    teachersCount: teachers.length,
+  });
+
   const weeks = getWeeksList();
   const detectedSlots = getDetectedSlots();
-  
+
   let slots = [];
   if (reportTurno === 'matutino') {
     slots = ['07:30', '08:20', '09:10', '10:15', '11:00', '11:45'];
@@ -2154,11 +2168,21 @@ const RelatoriosTab = () => {
               .map(s => s.classGroup)
             )].sort();
 
+            console.log('[DEBUG TURMAS GRID]', {
+              filteredSchedulesCount: filteredSchedules.length,
+              allTurmasCount: allTurmas.length,
+              allTurmas,
+              reportTurno,
+              sampleSchedules: filteredSchedules.slice(0, 2).map(s => ({ classGroup: s.classGroup, startTime: s.startTime, status: s.status }))
+            });
+
             // Filter turmas to only show those that have schedules for the selected turno
             const turmas = reportTurno !== 'auto'
               ? allTurmas.filter(turmaName => {
                   const turmaSchedules = filteredSchedules.filter(s => s.classGroup === turmaName);
-                  return turmaSchedules.some(s => isSlotsMatchTurno(s.startTime, reportTurno));
+                  const hasMatch = turmaSchedules.some(s => isSlotsMatchTurno(s.startTime, reportTurno));
+                  console.log(`[DEBUG] Turma "${turmaName}": ${turmaSchedules.length} schedules, matches=${hasMatch}`);
+                  return hasMatch;
                 })
               : allTurmas;
 
