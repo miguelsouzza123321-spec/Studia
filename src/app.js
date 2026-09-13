@@ -88,7 +88,6 @@ let reportModel = 'prof_turma'; // 'prof_turma', 'prof_subject', 'turma_grid'
 let reportCardSize = localStorage.getItem('reportCardSize') || 'medium'; // 'small', 'medium', 'large'
 let teacherSchedulesTab = 'grid'; // 'grid' or 'list'
 let mobileMenuOpen = false;
-let createUserModalVisible = false;
 let isRefreshingData = false; // Flag para evitar múltiplas requisições simultâneas
 
 // --- API ---
@@ -124,122 +123,6 @@ const getApiUrl = (url) => {
   }
   return cleanUrl;
 };
-
-function showApiConfigModal(explanation = '') {
-  if (document.getElementById('api-config-modal')) {
-    const expEl = document.getElementById('api-config-explanation');
-    if (expEl && explanation) {
-      expEl.innerHTML = explanation;
-    }
-    return;
-  }
-
-  const modal = document.createElement('div');
-  modal.id = 'api-config-modal';
-  modal.style.position = 'fixed';
-  modal.style.inset = '0';
-  modal.style.backgroundColor = 'rgba(15, 23, 42, 0.6)';
-  modal.style.backdropFilter = 'blur(4px)';
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
-  modal.style.padding = '16px';
-  modal.style.zIndex = '99999';
-  
-  modal.innerHTML = `
-    <div style="background-color: #ffffff; border-radius: 24px; max-width: 440px; width: 100%; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #f1f5f9; padding: 32px; display: flex; flex-direction: column; gap: 24px; font-family: system-ui, sans-serif;">
-      <div style="display: flex; align-items: center; gap: 12px; color: #d97706;">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-        <h3 style="font-size: 1.25rem; font-weight: 800; color: #0f172a; margin: 0;">Configuração de API do Servidor</h3>
-      </div>
-      
-      <p id="api-config-explanation" style="color: #64748b; font-size: 0.875rem; line-height: 1.6; margin: 0;">
-        ${explanation || 'Este site necessita se conectar a um servidor de banco de dados (API) para salvar e sincronizar os horários.'}
-      </p>
-
-      <div style="display: flex; flex-direction: column; gap: 8px;">
-        <label style="font-size: 0.75rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em;">URL do Servidor (API Base URL)</label>
-        <input
-          type="text"
-          id="api-config-input"
-          placeholder="https://sua-api.run.app"
-          value="${localStorage.getItem('api_base_url') || ''}"
-          style="width: 100%; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 0.875rem; font-weight: 500; outline: none; box-sizing: border-box; transition: all 0.2s;"
-        />
-        <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">
-          Insira a URL do seu app no Cloud Run (ex: <code>https://ais-pre-...run.app</code>).
-        </p>
-      </div>
-
-      <div id="api-config-status" style="font-size: 0.75rem; font-weight: 600; display: none;"></div>
-
-      <div style="display: flex; gap: 12px;">
-        <button
-          id="api-config-test"
-          type="button"
-          style="flex: 1; background-color: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 10px; padding: 11px; font-size: 0.875rem; font-weight: 700; color: #334155; cursor: pointer; transition: all 0.2s;"
-          onmouseover="this.style.backgroundColor='#e2e8f0'"
-          onmouseout="this.style.backgroundColor='#f1f5f9'"
-        >
-          Testar
-        </button>
-        <button
-          id="api-config-save"
-          type="button"
-          style="flex: 1; background-color: #2563eb; border: none; border-radius: 10px; padding: 11px; font-size: 0.875rem; font-weight: 700; color: #ffffff; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.25);"
-          onmouseover="this.style.backgroundColor='#1d4ed8'"
-          onmouseout="this.style.backgroundColor='#2563eb'"
-        >
-          Salvar e Fechar
-        </button>
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(modal);
-
-  const testBtn = modal.querySelector('#api-config-test');
-  const saveBtn = modal.querySelector('#api-config-save');
-  const input = modal.querySelector('#api-config-input');
-  const statusDiv = modal.querySelector('#api-config-status');
-
-  testBtn.addEventListener('click', async () => {
-    const val = input.value.trim();
-    if (!val) {
-      statusDiv.textContent = 'Por favor, insira uma URL.';
-      statusDiv.style.color = '#e11d48';
-      statusDiv.style.display = 'block';
-      return;
-    }
-    
-    statusDiv.textContent = 'Testando conexão...';
-    statusDiv.style.color = '#2563eb';
-    statusDiv.style.display = 'block';
-    
-    try {
-      const base = val.endsWith('/') ? val.slice(0, -1) : val;
-      const res = await fetch(`${base}/api/stats`, { method: 'GET' });
-      if (res.ok) {
-        statusDiv.textContent = 'Conectado com sucesso! A API respondeu perfeitamente.';
-        statusDiv.style.color = '#059669';
-      } else {
-        statusDiv.textContent = `Erro do servidor: Código ${res.status}`;
-        statusDiv.style.color = '#d97706';
-      }
-    } catch (e) {
-      statusDiv.textContent = 'Falha ao conectar. Verifique se a URL está correta e se o CORS está ativo no servidor.';
-      statusDiv.style.color = '#e11d48';
-    }
-  });
-
-  saveBtn.addEventListener('click', () => {
-    const val = input.value.trim();
-    localStorage.setItem('api_base_url', val);
-    apiBaseUrl = val;
-    document.body.removeChild(modal);
-    window.location.reload();
-  });
-}
 
 const api = {
   async request(url, options = {}) {
@@ -2406,46 +2289,6 @@ const slidesContent = [
     }
 ];
 
-const SlidesTab = () => `
-    <div class="max-w-4xl mx-auto h-full flex flex-col items-center justify-center space-y-12 py-10">
-        <div class="bg-white w-full aspect-video rounded-[3rem] shadow-2xl border border-slate-100 p-16 flex flex-col items-center justify-center text-center relative overflow-hidden group">
-            <div class="absolute -top-10 -right-10 w-40 h-40 bg-blue-50 rounded-full blur-3xl group-hover:bg-blue-100 transition-all"></div>
-            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-slate-50 rounded-full blur-3xl group-hover:bg-slate-100 transition-all"></div>
-            
-            <div class="bg-blue-600 text-white p-6 rounded-[2rem] shadow-xl mb-10 transform group-hover:scale-110 transition-all duration-500">
-                <i data-lucide="${slidesContent[currentSlide].icon}" size="48"></i>
-            </div>
-            
-            <h1 class="text-5xl font-black text-slate-900 tracking-tighter mb-4">${slidesContent[currentSlide].title}</h1>
-            <h3 class="text-xl font-bold text-blue-600 mb-8 uppercase tracking-widest text-sm">${slidesContent[currentSlide].subtitle}</h3>
-            
-            <div class="max-w-xl mx-auto">
-                <p class="text-lg text-slate-500 font-medium leading-relaxed whitespace-pre-line">
-                    ${slidesContent[currentSlide].content}
-                </p>
-            </div>
-            
-            <div class="absolute bottom-10 left-10 text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                Slide ${currentSlide + 1} de ${slidesContent.length}
-            </div>
-        </div>
-        
-        <div class="flex items-center gap-6">
-            <button onclick="actions.prevSlide()" class="p-4 bg-white rounded-2xl shadow-lg border border-slate-100 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all" ${currentSlide === 0 ? 'disabled' : ''}>
-                <i data-lucide="chevron-left" class="text-blue-600"></i>
-            </button>
-            <div class="flex gap-2">
-                ${slidesContent.map((_, i) => `
-                    <div class="w-3 h-3 rounded-full ${i === currentSlide ? 'bg-blue-600 scale-125' : 'bg-slate-200'} transition-all duration-300"></div>
-                `).join('')}
-            </div>
-            <button onclick="actions.nextSlide()" class="p-4 bg-white rounded-2xl shadow-lg border border-slate-100 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition-all" ${currentSlide === slidesContent.length - 1 ? 'disabled' : ''}>
-                <i data-lucide="chevron-right" class="text-blue-600"></i>
-            </button>
-        </div>
-    </div>
-`;
-
 // --- ACTIONS ---
 const TAB_ACCESS = {
   admin: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
@@ -2530,7 +2373,6 @@ const actions = {
     event.preventDefault();
     const name = document.getElementById('landing-name')?.value;
     const contact = document.getElementById('landing-contact')?.value;
-    const phone = document.getElementById('landing-phone')?.value;
     const message = document.getElementById('landing-message')?.value;
 
     if (name && contact && message) {
@@ -3454,13 +3296,11 @@ const actions = {
   showCreateUserModal(viewerRole = 'admin') {
     const modal = document.getElementById('create-user-modal');
     if (modal) modal.classList.remove('hidden');
-    createUserModalVisible = true;
   },
 
   hideCreateUserModal() {
     const modal = document.getElementById('create-user-modal');
     if (modal) modal.classList.add('hidden');
-    createUserModalVisible = false;
     // Clear form fields
     document.getElementById('user-displayname')?.value && (document.getElementById('user-displayname').value = '');
     document.getElementById('user-email')?.value && (document.getElementById('user-email').value = '');
@@ -3500,7 +3340,7 @@ const actions = {
       };
       if (subject) payload.subject = subject;
 
-      const response = await api.post('/api/users/create', payload);
+      await api.post('/api/users/create', payload);
       this.hideCreateUserModal();
       await this.refreshData();
       this.init();
