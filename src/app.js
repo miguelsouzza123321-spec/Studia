@@ -661,15 +661,22 @@ const LandingView = () => `
       .landing-hero-buttons .landing-cta-btn { padding: 1rem 2rem; font-size: 1.1rem; }
       .landing-secondary-btn { background: transparent; color: #2E5077; border: 2px solid #2E5077; }
       .landing-secondary-btn:hover { background: #2E5077; color: white; }
-      .landing-hero-visual { position: relative; height: 400px; animation: float 3s ease-in-out infinite; }
-      .landing-cube { width: 300px; height: 300px; position: relative; margin: auto; transform-style: preserve-3d; animation: rotateCube 20s infinite linear; }
-      .landing-cube-face { position: absolute; width: 300px; height: 300px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: white; opacity: 0.9; border: 2px solid rgba(255, 255, 255, 0.3); backdrop-filter: blur(10px); }
-      .landing-front  { background: linear-gradient(135deg, #2E5077, #5B99C2); transform: translateZ(150px); }
-      .landing-back   { background: linear-gradient(135deg, #5B99C2, #2E5077); transform: rotateY(180deg) translateZ(150px); }
-      .landing-right  { background: linear-gradient(135deg, #1e40af, #2E5077); transform: rotateY(90deg) translateZ(150px); }
-      .landing-left   { background: linear-gradient(135deg, #2E5077, #1e40af); transform: rotateY(-90deg) translateZ(150px); }
-      .landing-top    { background: linear-gradient(135deg, #5B99C2, #1e40af); transform: rotateX(90deg) translateZ(150px); }
-      .landing-bottom { background: linear-gradient(135deg, #1e40af, #5B99C2); transform: rotateX(-90deg) translateZ(150px); }
+      .landing-hero-visual { position: relative; height: 400px; perspective: 1000px; }
+      .landing-school-system { position: relative; width: 350px; height: 350px; margin: 0 auto; }
+      .landing-school-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; animation: pulseSchool 2s ease-in-out infinite; }
+      .landing-school { font-size: 4rem; margin-bottom: 0.5rem; filter: drop-shadow(0 4px 12px rgba(46, 80, 119, 0.3)); }
+      .landing-school-label { font-size: 0.9rem; font-weight: 700; color: #2E5077; letter-spacing: 1px; }
+      .landing-orbit-item { position: absolute; width: 60px; height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+      .landing-module { font-size: 2rem; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15)); }
+      .landing-module-label { font-size: 0.75rem; font-weight: 600; color: #2E5077; text-align: center; white-space: nowrap; }
+      .landing-orbit-1 { animation: orbit 8s linear infinite; --delay: 0s; }
+      .landing-orbit-2 { animation: orbit 8s linear infinite; --delay: 1.33s; }
+      .landing-orbit-3 { animation: orbit 8s linear infinite; --delay: 2.66s; }
+      .landing-orbit-4 { animation: orbit 8s linear infinite; --delay: 4s; }
+      .landing-orbit-5 { animation: orbit 8s linear infinite; --delay: 5.33s; }
+      .landing-orbit-6 { animation: orbit 8s linear infinite; --delay: 6.66s; }
+      @keyframes orbit { 0% { transform: translate(calc(120px * cos(0deg)), calc(120px * sin(0deg))) rotateZ(0deg); } 100% { transform: translate(calc(120px * cos(360deg)), calc(120px * sin(360deg))) rotateZ(360deg); } }
+      @keyframes pulseSchool { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.05); } }
       .landing-features { padding: 100px 5%; background: white; }
       .landing-section-title { text-align: center; font-size: 2.5rem; color: #2E5077; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; }
       .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
@@ -698,15 +705,16 @@ const LandingView = () => `
       .landing-footer { padding: 2rem 5%; background: #0f172a; color: white; text-align: center; }
       @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
       @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-20px); } }
-      @keyframes rotateCube { 0% { transform: rotateX(0deg) rotateY(0deg); } 100% { transform: rotateX(360deg) rotateY(360deg); } }
       @media (max-width: 768px) {
         .landing-nav-links { display: none; }
         .landing-hero { grid-template-columns: 1fr; padding: 60px 5% 40px; }
         .landing-hero-content h1 { font-size: 2rem; }
-        .landing-hero-visual { height: 250px; }
-        .landing-cube { width: 200px; height: 200px; }
-        .landing-cube-face { width: 200px; height: 200px; }
+        .landing-hero-visual { height: 300px; }
+        .landing-school-system { width: 280px; height: 280px; }
+        .landing-school { font-size: 3rem; }
+        .landing-module { font-size: 1.5rem; }
+        .landing-module-label { font-size: 0.65rem; }
+        .landing-orbit-1, .landing-orbit-2, .landing-orbit-3, .landing-orbit-4, .landing-orbit-5, .landing-orbit-6 { width: 50px; height: 50px; }
       }
     </style>
 
@@ -732,13 +740,38 @@ const LandingView = () => `
         </div>
       </div>
       <div class="landing-hero-visual">
-        <div class="landing-cube">
-          <div class="landing-cube-face landing-front">📚</div>
-          <div class="landing-cube-face landing-back">🔒</div>
-          <div class="landing-cube-face landing-right">⚡</div>
-          <div class="landing-cube-face landing-left">📊</div>
-          <div class="landing-cube-face landing-top">🎯</div>
-          <div class="landing-cube-face landing-bottom">✨</div>
+        <div class="landing-school-system">
+          <!-- Centro: Escola -->
+          <div class="landing-school-center">
+            <div class="landing-school">🏫</div>
+            <div class="landing-school-label">STUDIA</div>
+          </div>
+
+          <!-- Módulos orbitando -->
+          <div class="landing-orbit-item landing-orbit-1">
+            <div class="landing-module">📅</div>
+            <div class="landing-module-label">Horários</div>
+          </div>
+          <div class="landing-orbit-item landing-orbit-2">
+            <div class="landing-module">👥</div>
+            <div class="landing-module-label">Alunos</div>
+          </div>
+          <div class="landing-orbit-item landing-orbit-3">
+            <div class="landing-module">📊</div>
+            <div class="landing-module-label">Desempenho</div>
+          </div>
+          <div class="landing-orbit-item landing-orbit-4">
+            <div class="landing-module">🧪</div>
+            <div class="landing-module-label">Laboratórios</div>
+          </div>
+          <div class="landing-orbit-item landing-orbit-5">
+            <div class="landing-module">📢</div>
+            <div class="landing-module-label">Avisos</div>
+          </div>
+          <div class="landing-orbit-item landing-orbit-6">
+            <div class="landing-module">👨‍🏫</div>
+            <div class="landing-module-label">Professores</div>
+          </div>
         </div>
       </div>
     </section>
