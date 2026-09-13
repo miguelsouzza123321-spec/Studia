@@ -645,22 +645,26 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
 // --- VIEWS ---
 
 const LandingView = () => `
-  <div style="margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: linear-gradient(135deg, #ffffff 0%, #f0f4f8 100%); color: #0f172a; overflow-x: hidden;">
+  <div style="margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%); color: #e0e7ff; overflow-x: hidden; position: relative;">
+    <div class="landing-grid-bg"></div>
     <style>
-      .landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); position: fixed; width: 100%; top: 0; z-index: 1000; box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05); }
-      .landing-logo { font-size: 1.8rem; font-weight: 900; color: #2E5077; display: flex; align-items: center; gap: 0.5rem; }
+      .landing-grid-bg { position: fixed; inset: 0; z-index: 0; opacity: 0.1; background-image: linear-gradient(0deg, transparent 24%, rgba(91, 153, 194, 0.3) 25%, rgba(91, 153, 194, 0.3) 26%, transparent 27%, transparent 74%, rgba(91, 153, 194, 0.3) 75%, rgba(91, 153, 194, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(91, 153, 194, 0.3) 25%, rgba(91, 153, 194, 0.3) 26%, transparent 27%, transparent 74%, rgba(91, 153, 194, 0.3) 75%, rgba(91, 153, 194, 0.3) 76%, transparent 77%, transparent); background-size: 50px 50px; animation: gridShift 20s linear infinite; }
+      @keyframes gridShift { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
+      .landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(10px); position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid rgba(91, 153, 194, 0.1); }
+      .landing-logo { font-size: 0; font-weight: 900; color: #5B99C2; display: flex; align-items: center; gap: 0.5rem; }
       .landing-nav-links { display: flex; gap: 2.5rem; list-style: none; }
-      .landing-nav-links a { text-decoration: none; color: #0f172a; font-weight: 500; transition: color 0.3s; cursor: pointer; }
+      .landing-nav-links a { text-decoration: none; color: #cbd5e1; font-weight: 500; transition: color 0.3s; cursor: pointer; }
       .landing-nav-links a:hover { color: #5B99C2; }
-      .landing-cta-btn { background: #2E5077; color: white; padding: 0.75rem 1.5rem; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: none; cursor: pointer; }
-      .landing-cta-btn:hover { background: #1e40af; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(46, 80, 119, 0.2); }
-      .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; }
-      .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; color: #2E5077; animation: slideInLeft 0.8s ease-out; }
-      .landing-hero-content p { font-size: 1.2rem; color: #64748b; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
+      .landing-cta-btn { background: linear-gradient(135deg, #2E5077, #5B99C2); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: 1px solid rgba(91, 153, 194, 0.3); cursor: pointer; }
+      .landing-cta-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(91, 153, 194, 0.3); }
+      .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 4rem; position: relative; z-index: 1; }
+      .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, #e0e7ff 0%, #5B99C2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: slideInLeft 0.8s ease-out; }
+      .landing-hero-content h1 em { font-style: italic; color: #5B99C2; }
+      .landing-hero-content p { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
       .landing-hero-buttons { display: flex; gap: 1.5rem; animation: slideInLeft 0.8s ease-out 0.4s backwards; }
       .landing-hero-buttons .landing-cta-btn { padding: 1rem 2rem; font-size: 1.1rem; }
-      .landing-secondary-btn { background: transparent; color: #2E5077; border: 2px solid #2E5077; }
-      .landing-secondary-btn:hover { background: #2E5077; color: white; }
+      .landing-secondary-btn { background: transparent; color: #cbd5e1; border: 2px solid rgba(91, 153, 194, 0.5); }
+      .landing-secondary-btn:hover { background: rgba(91, 153, 194, 0.1); color: #5B99C2; border-color: #5B99C2; }
       .landing-hero-visual { position: relative; height: 400px; perspective: 1000px; }
       .landing-school-system { position: relative; width: 350px; height: 350px; margin: 0 auto; }
       .landing-school-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; animation: pulseSchool 2s ease-in-out infinite; }
@@ -685,32 +689,27 @@ const LandingView = () => `
         100% { transform: translate(140px, 0); }
       }
       @keyframes pulseSchool { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.08); } }
-      .landing-features { padding: 100px 5%; background: white; }
-      .landing-section-title { text-align: center; font-size: 2.5rem; color: #2E5077; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-features { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.5), rgba(26, 31, 58, 0.5)); position: relative; z-index: 1; }
+      .landing-section-title { text-align: center; font-size: 2.5rem; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-section-title::before { content: "Funcionalidades "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
       .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
-      .landing-feature-card { padding: 2rem; background: linear-gradient(135deg, rgba(46, 80, 119, 0.05), rgba(91, 153, 194, 0.05)); border-radius: 12px; border: 1px solid rgba(46, 80, 119, 0.1); transition: all 0.3s; animation: fadeInUp 0.8s ease-out; }
-      .landing-feature-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(46, 80, 119, 0.1); border-color: #5B99C2; }
+      .landing-feature-card { padding: 2rem; background: linear-gradient(135deg, rgba(91, 153, 194, 0.1), rgba(46, 80, 119, 0.1)); border-radius: 12px; border: 1px solid rgba(91, 153, 194, 0.2); transition: all 0.3s; animation: fadeInUp 0.8s ease-out; }
+      .landing-feature-card:hover { transform: translateY(-8px); box-shadow: 0 20px 40px rgba(91, 153, 194, 0.15); border-color: #5B99C2; background: linear-gradient(135deg, rgba(91, 153, 194, 0.15), rgba(46, 80, 119, 0.15)); }
       .landing-feature-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #2E5077, #5B99C2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1rem; color: white; }
-      .landing-feature-card h3 { color: #2E5077; margin-bottom: 1rem; font-size: 1.3rem; }
-      .landing-feature-card p { color: #64748b; line-height: 1.6; }
-      .landing-benefits { padding: 100px 5%; background: linear-gradient(135deg, #2E5077, #1e40af); color: white; }
+      .landing-feature-card h3 { color: #e0e7ff; margin-bottom: 1rem; font-size: 1.3rem; }
+      .landing-feature-card p { color: #cbd5e1; line-height: 1.6; }
+      .landing-benefits { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(26, 31, 58, 0.8)); position: relative; z-index: 1; }
       .landing-benefits-content { max-width: 900px; margin: 0 auto; }
       .landing-benefits h2 { font-size: 2.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-benefits h2::before { content: "Benefícios "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
       .landing-benefit-item { display: flex; gap: 1.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; }
-      .landing-benefit-check { width: 40px; height: 40px; background: rgba(255, 255, 255, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; }
-      .landing-benefit-item p { font-size: 1.1rem; line-height: 1.6; }
-      .landing-contact { padding: 100px 5%; background: white; text-align: center; }
-      .landing-contact h2 { font-size: 2.5rem; color: #2E5077; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; }
-      .landing-contact p { font-size: 1.2rem; color: #64748b; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s backwards; }
-      .landing-contact-form { max-width: 600px; margin: 0 auto; animation: fadeInUp 0.8s ease-out 0.4s backwards; }
-      .landing-form-group { margin-bottom: 1.5rem; text-align: left; }
-      .landing-form-group label { display: block; margin-bottom: 0.5rem; color: #2E5077; font-weight: 600; }
-      .landing-form-group input, .landing-form-group textarea { width: 100%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem; font-family: inherit; transition: all 0.3s; }
-      .landing-form-group input:focus, .landing-form-group textarea:focus { outline: none; border-color: #5B99C2; box-shadow: 0 0 0 3px rgba(91, 153, 194, 0.1); }
-      .landing-form-group textarea { resize: vertical; min-height: 120px; }
-      .landing-submit-btn { width: 100%; padding: 1rem; background: #2E5077; color: white; border: none; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
-      .landing-submit-btn:hover { background: #1e40af; transform: translateY(-2px); box-shadow: 0 10px 25px rgba(46, 80, 119, 0.2); }
-      .landing-footer { padding: 2rem 5%; background: #0f172a; color: white; text-align: center; }
+      .landing-benefit-check { width: 40px; height: 40px; background: rgba(91, 153, 194, 0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; border: 1px solid rgba(91, 153, 194, 0.3); }
+      .landing-benefit-item p { font-size: 1.1rem; line-height: 1.6; color: #cbd5e1; }
+      .landing-contact { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(26, 31, 58, 0.9)); text-align: center; position: relative; z-index: 1; }
+      .landing-contact h2 { font-size: 2.5rem; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; }
+      .landing-contact h2::before { content: "Contato "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
+      .landing-contact p { font-size: 1.2rem; color: #cbd5e1; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s backwards; }
+      .landing-footer { padding: 2rem 5%; background: rgba(10, 14, 39, 0.8); color: #cbd5e1; text-align: center; position: relative; z-index: 1; border-top: 1px solid rgba(91, 153, 194, 0.1); }
       @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
       @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
       @media (max-width: 768px) {
@@ -723,6 +722,7 @@ const LandingView = () => `
         .landing-module { font-size: 1.5rem; }
         .landing-module-label { font-size: 0.65rem; }
         .landing-orbit-1, .landing-orbit-2, .landing-orbit-3, .landing-orbit-4, .landing-orbit-5, .landing-orbit-6 { width: 50px; height: 50px; }
+        .landing-section-title::before, .landing-benefits h2::before, .landing-contact h2::before { display: none; }
       }
     </style>
 
@@ -740,7 +740,7 @@ const LandingView = () => `
 
     <section class="landing-hero">
       <div class="landing-hero-content">
-        <h1>Gestão Escolar Completa e Inteligente</h1>
+        <h1>Gestão Escolar<br><em>Inteligente</em> & <em>Integrada</em></h1>
         <p>Sistema digital que centraliza horários, laboratórios e presença em uma plataforma segura e profissional para sua escola.</p>
         <div class="landing-hero-buttons">
           <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Agende uma Demo</button>
