@@ -531,208 +531,176 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
 // --- VIEWS ---
 
 const LandingView = () => `
-  <div style="margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%); color: #e0e7ff; overflow-x: hidden; position: relative;">
-    <div class="landing-grid-bg"></div>
+  <div style="background: linear-gradient(135deg, #0f172a 0%, #1a1f3a 100%); min-height: 100vh; color: #fff; font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden;">
     <style>
-      .landing-grid-bg { position: fixed; inset: 0; z-index: 0; opacity: 0.1; background-image: linear-gradient(0deg, transparent 24%, rgba(91, 153, 194, 0.3) 25%, rgba(91, 153, 194, 0.3) 26%, transparent 27%, transparent 74%, rgba(91, 153, 194, 0.3) 75%, rgba(91, 153, 194, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(91, 153, 194, 0.3) 25%, rgba(91, 153, 194, 0.3) 26%, transparent 27%, transparent 74%, rgba(91, 153, 194, 0.3) 75%, rgba(91, 153, 194, 0.3) 76%, transparent 77%, transparent); background-size: 50px 50px; animation: gridShift 20s linear infinite; }
-      @keyframes gridShift { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, 50px); } }
-      .landing-nav { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(10, 14, 39, 0.95); backdrop-filter: blur(15px); position: fixed; width: 100%; top: 0; z-index: 1000; border-bottom: 1px solid rgba(91, 153, 194, 0.25); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3); }
-      .landing-logo { font-size: 0; font-weight: 900; color: #5B99C2; display: flex; align-items: center; gap: 0.5rem; }
-      .landing-nav-links { display: flex; gap: 2.5rem; list-style: none; }
-      .landing-nav-links a { text-decoration: none; color: #e0e7ff; font-weight: 500; transition: all 0.3s; cursor: pointer; font-size: 0.95rem; }
-      .landing-nav-links a:hover { color: #5B99C2; text-shadow: 0 0 10px rgba(91, 153, 194, 0.5); }
-      .landing-cta-btn { background: linear-gradient(135deg, #3b82f6, #5B99C2); color: white; padding: 0.75rem 1.5rem; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.3s; border: 1px solid rgba(91, 153, 194, 0.5); cursor: pointer; }
-      .landing-cta-btn:hover { transform: translateY(-3px); box-shadow: 0 12px 40px rgba(91, 153, 194, 0.4); border-color: #5B99C2; }
-      .landing-hero { margin-top: 80px; padding: 80px 5% 60px; display: grid; grid-template-columns: 1fr; align-items: center; gap: 4rem; position: relative; z-index: 1; max-width: 900px; }
-      .landing-hero-content { max-width: 100%; }
-      .landing-hero-content h1 { font-size: 3.5rem; line-height: 1.2; margin-bottom: 1.5rem; background: linear-gradient(135deg, #ffffff 0%, #5B99C2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; animation: slideInLeft 0.8s ease-out; font-weight: 900; }
-      .landing-hero-content h1 em { font-style: italic; color: #5B99C2; }
-      .landing-hero-content p { font-size: 1.2rem; color: #e0e7ff; margin-bottom: 2rem; line-height: 1.6; animation: slideInLeft 0.8s ease-out 0.2s backwards; }
-      .landing-hero-buttons { display: flex; gap: 1.5rem; animation: slideInLeft 0.8s ease-out 0.4s backwards; }
-      .landing-hero-buttons .landing-cta-btn { padding: 1rem 2rem; font-size: 1.1rem; }
-      .landing-secondary-btn { background: transparent; color: #cbd5e1; border: 2px solid rgba(91, 153, 194, 0.5); }
-      .landing-secondary-btn:hover { background: rgba(91, 153, 194, 0.1); color: #5B99C2; border-color: #5B99C2; }
-      .landing-hero-visual { position: relative; height: 400px; perspective: 1000px; }
-      .landing-school-system { position: relative; width: 350px; height: 350px; margin: 0 auto; }
-      .landing-school-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10; text-align: center; animation: pulseSchool 2s ease-in-out infinite; }
-      .landing-school { font-size: 4rem; margin-bottom: 0.5rem; filter: drop-shadow(0 4px 12px rgba(46, 80, 119, 0.3)); }
-      .landing-school-label { font-size: 0.9rem; font-weight: 700; color: #2E5077; letter-spacing: 1px; }
-      .landing-orbit-item { position: absolute; width: 70px; height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-      .landing-module { font-size: 2rem; margin-bottom: 0.5rem; filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15)); }
-      .landing-module-label { font-size: 0.75rem; font-weight: 600; color: #2E5077; text-align: center; white-space: nowrap; }
-      .landing-orbit-1 { animation: orbitCircle 12s linear infinite; }
-      .landing-orbit-2 { animation: orbitCircle 12s linear infinite; }
-      .landing-orbit-3 { animation: orbitCircle 12s linear infinite; }
-      .landing-orbit-4 { animation: orbitCircle 12s linear infinite; }
-      .landing-orbit-5 { animation: orbitCircle 12s linear infinite; }
-      .landing-orbit-6 { animation: orbitCircle 12s linear infinite; }
-      @keyframes orbitCircle {
-        0% { transform: translate(140px, 0); }
-        16.66% { transform: translate(70px, 121px); }
-        33.33% { transform: translate(-70px, 121px); }
-        50% { transform: translate(-140px, 0); }
-        66.66% { transform: translate(-70px, -121px); }
-        83.33% { transform: translate(70px, -121px); }
-        100% { transform: translate(140px, 0); }
-      }
-      @keyframes pulseSchool { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.08); } }
-      .landing-features { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.5), rgba(26, 31, 58, 0.5)); position: relative; z-index: 1; }
-      .landing-section-title { text-align: center; font-size: 2.5rem; margin-bottom: 3rem; animation: fadeInUp 0.8s ease-out; color: #ffffff; font-weight: 800; }
-      .landing-section-title::before { content: "Funcionalidades "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
-      .landing-features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; }
-      .landing-feature-card { padding: 2rem; background: linear-gradient(135deg, rgba(91, 153, 194, 0.15), rgba(46, 80, 119, 0.12)); border-radius: 12px; border: 1px solid rgba(91, 153, 194, 0.3); transition: all 0.4s ease; animation: fadeInUp 0.8s ease-out; opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
-      .landing-feature-card:hover { transform: translateY(-10px) scale(1.02); box-shadow: 0 20px 50px rgba(91, 153, 194, 0.25); border-color: #5B99C2; background: linear-gradient(135deg, rgba(91, 153, 194, 0.2), rgba(46, 80, 119, 0.18)); }
-      .landing-feature-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #3b82f6, #5B99C2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin-bottom: 1rem; color: white; box-shadow: 0 4px 15px rgba(91, 153, 194, 0.3); }
-      .landing-feature-card h3 { color: #ffffff; margin-bottom: 1rem; font-size: 1.3rem; font-weight: 700; }
-      .landing-feature-card p { color: #cbd5e1; line-height: 1.6; }
-      .landing-benefits { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.8), rgba(26, 31, 58, 0.8)); position: relative; z-index: 1; }
-      .landing-benefits-content { max-width: 900px; margin: 0 auto; }
-      .landing-benefits h2 { font-size: 2.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; color: #ffffff; font-weight: 800; }
-      .landing-benefits h2::before { content: "Benefícios "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
-      .landing-benefit-item { display: flex; gap: 1.5rem; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out; opacity: 0; animation: fadeInUp 0.8s ease-out forwards; }
-      .landing-benefit-check { width: 40px; height: 40px; background: linear-gradient(135deg, rgba(91, 153, 194, 0.3), rgba(59, 130, 246, 0.3)); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 1.5rem; border: 1px solid rgba(91, 153, 194, 0.4); }
-      .landing-benefit-item p { font-size: 1.1rem; line-height: 1.6; color: #e0e7ff; }
-      .landing-contact { padding: 100px 5%; background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(26, 31, 58, 0.9)); text-align: center; position: relative; z-index: 1; }
-      .landing-contact h2 { font-size: 2.5rem; margin-bottom: 1rem; animation: fadeInUp 0.8s ease-out; color: #ffffff; font-weight: 800; }
-      .landing-contact h2::before { content: "Contato "; display: block; font-size: 0.9rem; color: #5B99C2; font-weight: 600; letter-spacing: 1px; margin-bottom: 1rem; }
-      .landing-contact p { font-size: 1.2rem; color: #e0e7ff; margin-bottom: 2rem; animation: fadeInUp 0.8s ease-out 0.2s backwards; }
-      .landing-footer { padding: 2rem 5%; background: rgba(10, 14, 39, 0.8); color: #cbd5e1; text-align: center; position: relative; z-index: 1; border-top: 1px solid rgba(91, 153, 194, 0.1); }
-      @keyframes slideInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
-      @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes slideInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes fadeInUp { from { opacity: 0; } to { opacity: 1; } }
+      details summary:hover { color: #2563eb !important; }
       @media (max-width: 768px) {
-        .landing-nav-links { display: none; }
-        .landing-hero { grid-template-columns: 1fr; padding: 60px 5% 40px; }
-        .landing-hero-content h1 { font-size: 2rem; }
-        .landing-hero-visual { height: 300px; }
-        .landing-school-system { width: 280px; height: 280px; }
-        .landing-school { font-size: 3rem; }
-        .landing-module { font-size: 1.5rem; }
-        .landing-module-label { font-size: 0.65rem; }
-        .landing-orbit-1, .landing-orbit-2, .landing-orbit-3, .landing-orbit-4, .landing-orbit-5, .landing-orbit-6 { width: 50px; height: 50px; }
-        .landing-section-title::before, .landing-benefits h2::before, .landing-contact h2::before { display: none; }
+        h1 { font-size: 1.75rem !important; }
+        nav > div:nth-child(2) { display: none; }
       }
     </style>
 
-    <nav class="landing-nav">
-      <div class="landing-logo" style="font-size: 0;">
-        ${Logo(120, 35)}
+    <!-- Navbar -->
+    <nav style="position: fixed; top: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(37, 99, 235, 0.1); padding: 1.5rem 2rem; z-index: 40; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        ${Logo(140, 40)}
       </div>
-      <ul class="landing-nav-links">
-        <li><a onclick="document.getElementById('features-section').scrollIntoView({behavior:'smooth'})">Funcionalidades</a></li>
-        <li><a onclick="document.getElementById('benefits-section').scrollIntoView({behavior:'smooth'})">Benefícios</a></li>
-        <li><a onclick="document.getElementById('contact-section').scrollIntoView({behavior:'smooth'})">Contato</a></li>
-      </ul>
-      <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Entrar</button>
+      <div style="display: flex; gap: 2rem; align-items: center;">
+        <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Como Funciona</a>
+        <a onclick="document.getElementById('resources').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Recursos</a>
+        <a onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">FAQ</a>
+        <button onclick="actions.showLoginModal('login')" style="background: #2563eb; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">Acessar Portal</button>
+      </div>
     </nav>
 
-    <section class="landing-hero">
-      <div class="landing-hero-content">
-        <h1 style="color: #0a0e27; background: none; -webkit-text-fill-color: unset;"><span style="color: #0a0e27;">Gestão Escolar</span><br><em style="color: #5B99C2;">Inteligente</em> & <em style="color: #5B99C2;">Integrada</em></h1>
-        <p style="color: #0a0e27;">Sistema digital que centraliza horários, laboratórios e presença em uma plataforma segura e profissional para sua escola.</p>
-        <div class="landing-hero-buttons">
-          <button onclick="actions.showLoginModal('login')" class="landing-cta-btn">Entrar</button>
+    <!-- Hero Section -->
+    <section style="padding-top: 8rem; padding-bottom: 4rem; text-align: center; animation: slideInDown 0.8s ease-out;">
+      <div style="max-width: 900px; margin: 0 auto; padding: 0 1rem;">
+        <div style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 2rem; padding: 0.5rem 1.5rem; display: inline-block; margin-bottom: 2rem;">
+          <span style="color: #06b6d4; font-weight: 600; font-size: 0.85rem;">🚀 Gestão Escolar Inteligente com Zero Aulas Vagas • v2.4 Pro</span>
+        </div>
+        <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -1px;">A grade escolar que<br><span style="background: linear-gradient(135deg, #2563eb, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">elimina aulas vagas</span><br>em segundos.</h1>
+        <p style="font-size: 1.25rem; color: #cbd5e1; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">Substituição automática de professores ausentes, gestão de laboratórios em tempo real e controle absoluto para a coordenação pedagógica.</p>
+        <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
+          <button onclick="actions.showLoginModal('login')" style="background: #2563eb; color: white; border: none; padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 30px rgba(37, 99, 235, 0.3);">🎓 Entrar no Portal da Escola</button>
+          <button onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="background: transparent; color: white; border: 2px solid rgba(255, 255, 255, 0.2); padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s;">Ver Demonstração Interativa</button>
+        </div>
+        <div style="display: flex; gap: 3rem; justify-content: center; margin-top: 3rem; flex-wrap: wrap; font-weight: 600; font-size: 0.9rem;">
+          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Pronto para uso imediato</div>
+          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Armazenamento Seguro e Criptografado</div>
+          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> 1 Toque no Celular do Professor</div>
         </div>
       </div>
     </section>
 
-    <section class="landing-features" id="features-section">
-      <h2 class="landing-section-title">Funcionalidades Principais</h2>
-      <div class="landing-features-grid">
-        <div class="landing-feature-card">
-          <div class="landing-feature-icon">📅</div>
-          <h3>Grade Horária Digital</h3>
-          <p>Organize e compartilhe horários de aulas com professores e alunos em tempo real.</p>
+    <!-- Stats Section -->
+    <section style="background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(37, 99, 235, 0.1); border-bottom: 1px solid rgba(37, 99, 235, 0.1); padding: 4rem 2rem; animation: fadeInUp 1s ease-out 0.3s both;">
+      <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; text-align: center;">
+        <div>
+          <div style="font-size: 2.5rem; font-weight: 900; color: #2563eb;">+120 mil</div>
+          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Aulas Vagas Evitadas</div>
         </div>
-        <div class="landing-feature-card">
-          <div class="landing-feature-icon">🔬</div>
-          <h3>Gerenciamento de Laboratórios</h3>
-          <p>Reserve e controle o uso dos laboratórios de forma simples e eficiente.</p>
+        <div>
+          <div style="font-size: 2.5rem; font-weight: 900; color: #06b6d4;">99.4%</div>
+          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Taxa de Presença Coberta</div>
         </div>
-        <div class="landing-feature-card">
-          <div class="landing-feature-icon">📋</div>
-          <h3>Atestados Médicos</h3>
-          <p>Receba e aprove atestados de forma digital, reduzindo burocracias.</p>
+        <div>
+          <div style="font-size: 2.5rem; font-weight: 900; color: #2563eb;">-85%</div>
+          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Tempo da Coordenação</div>
         </div>
-        <div class="landing-feature-card">
-          <div class="landing-feature-icon">👥</div>
-          <h3>Gestão de Usuários</h3>
-          <p>Crie e gerencie contas de professores, diretores e alunos facilmente.</p>
-        </div>
-        <div class="landing-feature-card">
-          <div class="landing-feature-icon">📊</div>
-          <h3>Relatórios Detalhados</h3>
-          <p>Gere relatórios completos sobre frequência e atividades escolares.</p>
-        </div>
-        <div class="landing-feature-card">
-          <div class="landing-feature-icon">🔒</div>
-          <h3>Segurança em Primeiro Lugar</h3>
-          <p>Dados criptografados e acesso controlado por função e escola.</p>
+        <div>
+          <div style="font-size: 2.5rem; font-weight: 900; color: #06b6d4;">42 seg</div>
+          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Tempo Médio de Substituição</div>
         </div>
       </div>
     </section>
 
-    <section class="landing-benefits" id="benefits-section">
-      <div class="landing-benefits-content">
-        <h2>Por que escolher Studia?</h2>
-        <div class="landing-benefit-item">
-          <div class="landing-benefit-check">✓</div>
-          <p><strong>Aumenta Eficiência:</strong> Reduz tarefas administrativas em até 70%, liberando tempo para o que importa.</p>
+    <!-- Features Section -->
+    <section id="features" style="padding: 6rem 2rem; max-width: 1200px; margin: 0 auto;">
+      <div style="text-align: center; margin-bottom: 4rem;">
+        <div style="color: #06b6d4; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">FLUXO INTELIGENTE DE PONTA A PONTA</div>
+        <h2 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 1rem;">Como o Studia transforma a rotina da sua escola</h2>
+        <p style="color: #cbd5e1; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Do cadastro da grade horária até a gestão de imprevistos e emissão de relatórios oficiais em tempo real.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+        <div style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.4s both;">
+          <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">⚡</div>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Zero Alunos Ociosos</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Quando ocorre uma falta, o algoritmo Studia cruza os horários livres no mesmo turno e sugere substitutos compatíveis. A coordenação designa com apenas 1 clique.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(37, 99, 235, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Substituição em 42 seg</div>
         </div>
-        <div class="landing-benefit-item">
-          <div class="landing-benefit-check">✓</div>
-          <p><strong>Melhora Comunicação:</strong> Mantém professores, diretores e pais na mesma página com atualizações em tempo real.</p>
+
+        <div style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.5s both;">
+          <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #06b6d4, #0891b2); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">🛡️</div>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Espaços Otimizados</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Controle de agendamentos para salas de informática, laboratórios de ciências e quadras esportivas sem sobreposição de turmas.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(6, 182, 212, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Fim dos conflitos de espaço</div>
         </div>
-        <div class="landing-benefit-item">
-          <div class="landing-benefit-check">✓</div>
-          <p><strong>Reduz Custos:</strong> Elimina papel, telefones e reuniões desnecessárias com um sistema centralizado.</p>
+
+        <div style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.6s both;">
+          <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #a855f7, #9333ea); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">📊</div>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Visão 360° da Escola</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Um dashboard dinâmico com o mapa de todas as salas ativas simultaneamente, identificando quais professores estão em aula, quais salas estão vazias e as posições ativas.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(168, 85, 247, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Controle visual total</div>
         </div>
-        <div class="landing-benefit-item">
-          <div class="landing-benefit-check">✓</div>
-          <p><strong>Segurança de Dados:</strong> Protege informações sensíveis com criptografia de nível empresarial.</p>
-        </div>
-        <div class="landing-benefit-item">
-          <div class="landing-benefit-check">✓</div>
-          <p><strong>Suporte Dedicado:</strong> Equipe técnica pronta para ajudar sua escola 24/7.</p>
+
+        <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.7s both;">
+          <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">📄</div>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Relatórios Executivos & Impressão A4 Paisagem</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Gere gráficos de assiduidade por docente, taxas de cobertura e exportação em formato padrão A4 Paisagem para quadro de avisos ou arquivo da secretaria.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ PDF pronto para impressão</div>
         </div>
       </div>
     </section>
 
-    <section class="landing-contact" id="contact-section">
-      <h2>Pronto para transformar sua escola?</h2>
-      <p style="margin-bottom: 2rem;">Fale conosco pelo WhatsApp e conheça como Studia pode ajudar sua instituição.</p>
-      <a href="https://wa.me/5541987654321?text=Olá! Gostaria de conhecer mais sobre o Studia" target="_blank" style="display: inline-block; background: #25D366; color: white; padding: 1rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.1rem; transition: all 0.3s; box-shadow: 0 10px 25px rgba(37, 211, 102, 0.3);" onmouseover="this.style.background='#20BA5A'; this.style.transform='translateY(-2px)';" onmouseout="this.style.background='#25D366'; this.style.transform='translateY(0)';">
-        💬 Fale conosco no WhatsApp
-      </a>
+    <!-- Testimonials -->
+    <section style="padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; border-top: 1px solid rgba(37, 99, 235, 0.1);">
+      <div style="text-align: center; margin-bottom: 4rem;">
+        <div style="color: #06b6d4; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">CASOS DE SUCESSO</div>
+        <h2 style="font-size: 2.5rem; font-weight: 900;">O que dizem os diretores e coordenadores</h2>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 2rem;">
+          <div style="color: #fbbf24; margin-bottom: 1rem;">★★★★★</div>
+          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">"O Studia acabou com o pesadelo das 07h da manhã quando um professor passava mal. Em 30 segundos achamos um substituto e a escola funciona sem tumulto."</p>
+          <p style="color: #fff; font-weight: 600;">Profª Helena Vasconcelos</p>
+          <p style="color: #94a3b8; font-size: 0.9rem;">Diretora Pedagógica • Colégio Santa Cruz</p>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 2rem;">
+          <div style="color: #fbbf24; margin-bottom: 1rem;">★★★★★</div>
+          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">"Os professores adoraram a facilidade de confirmar a presença no celular. A gestão de laboratórios também economizou incontáveis discussões."</p>
+          <p style="color: #fff; font-weight: 600;">Marcos Drummond</p>
+          <p style="color: #94a3b8; font-size: 0.9rem;">Coordenador Geral • Instituto Drummond</p>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 2rem;">
+          <div style="color: #fbbf24; margin-bottom: 1rem;">★★★★★</div>
+          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">"A exportação em formato A4 e os relatórios em PDF nos deram total conformidade nas reuniões com os pais e auditórios de ensino."</p>
+          <p style="color: #fff; font-weight: 600;">Cláudia Fontes</p>
+          <p style="color: #94a3b8; font-size: 0.9rem;">Gestora Escolar • Rede Prisma de Ensino</p>
+        </div>
+      </div>
     </section>
 
-    <footer class="landing-footer">
-      <p>&copy; ${new Date().getFullYear()} Studia - Sistema de Gestão Escolar Digital. Todos os direitos reservados.</p>
+    <!-- FAQ -->
+    <section id="faq" style="padding: 6rem 2rem; max-width: 900px; margin: 0 auto; border-top: 1px solid rgba(37, 99, 235, 0.1);">
+      <div style="text-align: center; margin-bottom: 4rem;">
+        <div style="color: #06b6d4; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">PERGUNTAS FREQUENTES</div>
+        <h2 style="font-size: 2.5rem; font-weight: 900;">Tire suas dúvidas sobre o Studia</h2>
+      </div>
+      <div style="space-y: 2rem;">
+        <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
+          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Como o Studia resolve as aulas vagas tão rápido?</summary>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">O algoritmo analisa em tempo real os horários livres dos professores no mesmo turno e apresenta as melhores opções de compatibilidade. A coordenação clica uma vez e pronto — a informação é enviada ao professor via push notification.</p>
+        </details>
+
+        <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
+          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Os dados da minha escola são seguros e privados?</summary>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Sim. Todos os dados são criptografados com segurança de nível institucional e sincronizados em tempo real. O Studia não compartilha informações com terceiros e opera sob rigoroso compliance de privacidade.</p>
+        </details>
+
+        <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
+          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Os professores precisam instalar algum aplicativo pesado?</summary>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Não. O Studia é acessível 100% via navegador web. Os professores recebem notificações push no celular, mas a plataforma roda perfeitamente em qualquer smartphone moderno sem necessidade de app nativo.</p>
+        </details>
+
+        <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
+          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Como funciona a ativação com PIX e Cartão de Crédito?</summary>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">O Studia oferece planos por escola com pagamento recorrente via PIX ou cartão. Depois da ativação, todo o sistema funciona normalmente com suporte integral da equipe Studia COP.</p>
+        </details>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="background: rgba(15, 23, 42, 0.8); border-top: 1px solid rgba(37, 99, 235, 0.1); padding: 3rem 2rem; text-align: center; color: #94a3b8;">
+      <p>© 2026 Studia SaaS — Todos os direitos reservados.</p>
+      <p style="margin-top: 1rem; font-size: 0.9rem;">Criptografia de nível institucional com sincronização em tempo real.</p>
     </footer>
-
-    <script>
-      // Animações fluidas ao scroll com Intersection Observer
-      const observerOptions = { threshold: 0.15, rootMargin: '0px 0px -60px 0px' };
-      const observer = new IntersectionObserver((entries) => {
-        entries.forEach((entry, index) => {
-          if (entry.isIntersecting) {
-            setTimeout(() => {
-              entry.target.style.opacity = '1';
-              entry.target.style.transform = 'translateY(0)';
-            }, index * 80);
-            observer.unobserve(entry.target);
-          }
-        });
-      }, observerOptions);
-
-      setTimeout(() => {
-        document.querySelectorAll('.landing-feature-card, .landing-benefit-item').forEach((el, index) => {
-          el.style.opacity = '0';
-          el.style.transform = 'translateY(40px)';
-          el.style.transition = 'all 0.7s cubic-bezier(0.34, 1.56, 0.64, 1)';
-          observer.observe(el);
-        });
-      }, 150);
-    </script>
 
     <!-- Login/Register Modal -->
     <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 ${authMode === 'closed' ? 'hidden' : ''}">
