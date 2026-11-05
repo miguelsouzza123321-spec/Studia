@@ -109,8 +109,6 @@ if (isStaticHost) {
   apiBaseUrl = 'https://studia-production-3631.up.railway.app';
   localStorage.setItem('api_base_url', apiBaseUrl);
 }
-  }
-}
 
 const getApiUrl = (url) => {
   if (url.startsWith('http://') || url.startsWith('https://')) {
