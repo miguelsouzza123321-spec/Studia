@@ -18,6 +18,17 @@ Este guia mostra como fazer deploy do Studia em produção usando **Vercel** (re
 - [ ] Banco Supabase em produção
 - [ ] Domínio (opcional, você pode usar domínio da plataforma)
 
+## Alternativa: Render (aplicação Express completa)
+
+O arquivo `render.yaml` configura o frontend e a API no mesmo serviço web.
+
+1. Envie o repositório para o GitHub.
+2. No Render, crie um **Blueprint** e conecte o repositório.
+3. Configure `SUPABASE_URL`, `SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` como variáveis privadas do serviço.
+4. Aplique o Blueprint e aguarde o deploy. O Render fornece um endereço `onrender.com`.
+
+O plano gratuito pode suspender o serviço após inatividade, deixando a primeira abertura mais lenta. Para uso escolar contínuo, confira as condições do plano ativo antes de publicar.
+
 ## Opção 1: Deploy em Vercel (Recomendado)
 
 ### 1. Conectar Repositório

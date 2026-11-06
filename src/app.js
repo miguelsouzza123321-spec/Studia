@@ -98,13 +98,14 @@ if (apiBaseUrl === 'undefined' || apiBaseUrl === 'null' || apiBaseUrl === '/') {
 }
 
 const isLocalHost = ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname);
+const isRenderHost = window.location.hostname.endsWith('.onrender.com');
 if (isLocalHost) {
   apiBaseUrl = 'http://localhost:3000';
   localStorage.removeItem('api_base_url');
 }
 
 // If we are running on github.io or another external static host, use the deployed API.
-const isStaticHost = !isLocalHost && !window.location.hostname.endsWith('run.app') && !window.location.hostname.endsWith('railway.app');
+const isStaticHost = !isLocalHost && !isRenderHost && !window.location.hostname.endsWith('run.app') && !window.location.hostname.endsWith('railway.app');
 if (isStaticHost) {
   apiBaseUrl = 'https://studia-production-3631.up.railway.app';
   localStorage.setItem('api_base_url', apiBaseUrl);
