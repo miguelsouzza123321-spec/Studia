@@ -107,7 +107,7 @@ if (isLocalHost) {
 // If we are running on github.io or another external static host, use the deployed API.
 const isStaticHost = !isLocalHost && !isRenderHost && !window.location.hostname.endsWith('run.app') && !window.location.hostname.endsWith('railway.app');
 if (isStaticHost) {
-  apiBaseUrl = 'https://studia-production-3631.up.railway.app';
+  apiBaseUrl = 'https://studia-8st9.onrender.com';
   localStorage.setItem('api_base_url', apiBaseUrl);
 }
 
