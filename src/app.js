@@ -104,9 +104,14 @@ if (isLocalHost) {
   localStorage.removeItem('api_base_url');
 }
 
-// If we are running on github.io or another external static host, use the deployed API.
-const isStaticHost = !isLocalHost && !isRenderHost && !window.location.hostname.endsWith('run.app') && !window.location.hostname.endsWith('railway.app');
-if (isStaticHost) {
+if (isRenderHost) {
+  apiBaseUrl = '';
+  localStorage.removeItem('api_base_url');
+}
+
+// External hosts use the deployed Render API.
+const isExternalHost = !isLocalHost && !isRenderHost;
+if (isExternalHost) {
   apiBaseUrl = 'https://studia-8st9.onrender.com';
   localStorage.setItem('api_base_url', apiBaseUrl);
 }
