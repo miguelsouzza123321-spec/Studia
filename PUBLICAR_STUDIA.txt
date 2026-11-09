@@ -1,0 +1,57 @@
+COMO PUBLICAR O STUDIA
+======================
+
+As alterações do código estão em um commit local. Para publicar, é preciso
+enviar esse commit ao GitHub e também atualizar o frontend no Netlify.
+
+1. PUBLICAR O BACKEND PELO GITHUB E RENDER
+-----------------------------------------
+
+1. Abra a pasta do projeto Studia no VS Code.
+2. Entre em "Source Control" (ícone de ramificação na barra lateral).
+3. Confira se a branch atual é "main".
+4. Clique em "Sync Changes" ou "Push".
+5. Se o VS Code pedir, entre na sua conta GitHub e autorize o acesso.
+6. Aguarde o envio terminar. O commit pendente será enviado ao GitHub.
+7. Abra o painel do Render e confira o serviço "studia".
+8. Aguarde o novo deploy terminar com sucesso antes de testar o site.
+
+Se preferir usar o terminal do VS Code, execute:
+
+  git push origin main
+
+Se aparecer uma solicitação de autenticação, entre no GitHub pelo navegador
+quando solicitado. Não compartilhe sua senha nem chaves de acesso.
+
+2. PUBLICAR O FRONTEND PELO NETLIFY
+-----------------------------------
+
+1. Baixe o arquivo "studia-netlify.zip" anexado nesta conversa.
+2. Extraia o ZIP no computador. Não envie o ZIP fechado se a página do Netlify
+   não aceitar o formato.
+3. Confira que os arquivos "index.html" e a pasta "assets" estão juntos na
+   pasta extraída.
+4. Abra o painel do Netlify e selecione o site Studia.
+5. Vá à área de deploys e abra a opção de deploy manual/Netlify Drop.
+6. Arraste a pasta extraída (a que contém o "index.html" e "assets") para a
+   área de upload.
+7. Aguarde o deploy terminar e abra o site para conferir.
+
+3. CONFERIR
+-----------
+
+1. Entre no Studia e confira se a tela carrega.
+2. Na aba Usuários, confira as caixas de seleção e a opção "Excluir
+   selecionados".
+3. Teste com cuidado: a exclusão de uma conta é permanente.
+4. Confira também o catálogo de matérias e as associações com professores.
+
+IMPORTANTE
+----------
+
+- O ZIP atualiza apenas o frontend do Netlify; não atualiza o backend.
+- O push para GitHub é necessário para o Render receber as alterações do
+  servidor e iniciar o deploy.
+- A migração 005 do catálogo de matérias já foi executada no Supabase.
+- Se um deploy falhar, não repita exclusões de contas; confira os logs do
+  Render ou o status do deploy no Netlify primeiro.
