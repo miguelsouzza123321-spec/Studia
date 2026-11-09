@@ -73,7 +73,10 @@ try {
 let schedules = [];
 let teachers = [];
 let allUsers = [];
+let selectedUserIds = new Set();
 let schools = [];
+let schoolSubjects = [];
+let subjectSchoolId = '';
 let stats = { total: 0, confirmed: 0, absent: 0, pending: 0 };
 let currentTab = 'horarios';
 let authMode = 'closed'; // 'login', 'register' or 'closed'
@@ -1008,6 +1011,14 @@ const TeacherView = () => {
   `;
 };
 
+const getAssignedSubjectsForTeacher = (teacherId) => {
+  const teacher = teachers.find(item => item.uid === teacherId);
+  if (!teacher) return [];
+  return schoolSubjects
+    .filter(subject => subject.school_id === teacher.school_id && (subject.teacherIds || []).includes(teacherId))
+    .map(subject => subject.subject);
+};
+
 const CreateModal = () => `
   <!-- Same Create Modal logic but with current state -->
   <div id="create-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
@@ -1016,7 +1027,8 @@ const CreateModal = () => `
       <h3 class="text-2xl font-bold mb-8">Novo Agendamento</h3>
       <form onsubmit="actions.createSchedule(event)" class="space-y-4">
         <div class="grid grid-cols-2 gap-4">
-          <input type="text" id="form-subject" placeholder="Matéria" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+          <input type="text" id="form-subject" list="form-subject-options" placeholder="Selecione ou digite a matéria" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+          <datalist id="form-subject-options"></datalist>
           <input type="text" id="form-class-group" placeholder="Turma (ex: 9A, 3BI)" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
         </div>
         <div class="grid grid-cols-2 gap-4">
@@ -1027,7 +1039,7 @@ const CreateModal = () => `
           <input type="time" id="form-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" value="18:45" required>
           <input type="time" id="form-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" value="22:45" required>
         </div>
-        <select id="form-teacher" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+        <select id="form-teacher" onchange="actions.updateScheduleSubjectOptions(this.value)" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
           <option value="">Selecione o Professor</option>
           ${teachers.map(t => `<option value="${t.uid}">${t.displayName}</option>`).join('')}
         </select>
@@ -1050,7 +1062,8 @@ const EditModal = () => `
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Matéria</label>
-            <input type="text" id="edit-form-subject" placeholder="Matéria" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+            <input type="text" id="edit-form-subject" list="edit-form-subject-options" placeholder="Selecione ou digite a matéria" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+            <datalist id="edit-form-subject-options"></datalist>
           </div>
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Turma</label>
@@ -1079,7 +1092,7 @@ const EditModal = () => `
         </div>
         <div>
           <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Professor</label>
-          <select id="edit-form-teacher" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+          <select id="edit-form-teacher" onchange="actions.updateScheduleSubjectOptions(this.value, '', 'edit-form')" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
             <option value="">Selecione o Professor</option>
             ${teachers.map(t => `<option value="${t.uid}">${t.displayName}</option>`).join('')}
           </select>
@@ -1612,11 +1625,79 @@ const ROLE_META = {
   teacher: { badge: 'bg-blue-100 text-blue-700', label: 'Professor' },
 };
 
+const TeacherSubjectAssignments = ({ viewerRole }) => {
+  const canChooseSchool = viewerRole === 'admin' || viewerRole === 'dev';
+  const activeSchoolId = viewerRole === 'diretor'
+    ? user?.school_id
+    : (subjectSchoolId || user?.school_id || schools[0]?.id || '');
+  const subjects = schoolSubjects.filter(item => item.school_id === activeSchoolId);
+  const schoolTeachers = allUsers
+    .filter(account => account.role === 'teacher' && account.school_id === activeSchoolId)
+    .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+
+  return `
+    <section class="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 md:p-7 shadow-sm">
+      <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+        <div>
+          <h4 class="text-xl font-black text-slate-900">Matérias e professores</h4>
+          <p class="mt-1 text-sm font-medium text-slate-500">O catálogo pertence à escola. Remover um professor apenas desvincula suas matérias; o catálogo e os horários antigos permanecem.</p>
+        </div>
+        ${canChooseSchool ? `
+          <select onchange="actions.selectSubjectSchool(this.value)" class="w-full md:w-72 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700" aria-label="Escola do catálogo de matérias">
+            <option value="">Selecione uma escola</option>
+            ${schools.map(school => `<option value="${school.id}" ${school.id === activeSchoolId ? 'selected' : ''}>${school.name}</option>`).join('')}
+          </select>
+        ` : `<span class="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-black uppercase text-blue-700">${schools.find(school => school.id === activeSchoolId)?.name || 'Minha escola'}</span>`}
+      </div>
+
+      <form onsubmit="actions.createSchoolSubject(event)" class="flex flex-col gap-3 sm:flex-row">
+        <input id="school-subject-name" type="text" maxlength="255" placeholder="Adicionar matéria ao checklist" class="min-w-0 flex-1 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-800" required ${activeSchoolId ? '' : 'disabled'}>
+        <button type="submit" class="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50" ${activeSchoolId ? '' : 'disabled'}>Adicionar matéria</button>
+      </form>
+
+      ${!activeSchoolId ? `
+        <p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Cadastre uma escola para gerenciar o catálogo de matérias.</p>
+      ` : subjects.length === 0 ? `
+        <p class="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-500">O checklist está vazio. Adicione as matérias usadas nesta escola.</p>
+      ` : `
+        <div class="space-y-3">
+          ${subjects.map(subject => `
+            <div class="rounded-2xl border border-slate-200 p-4">
+              <div class="mb-3 flex items-center justify-between gap-3">
+                <h5 class="font-black text-slate-800">${subject.subject}</h5>
+                <button type="button" onclick="actions.deleteSchoolSubject('${subject.id}', '${subject.subject.replace(/'/g, "\\'")}')" class="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Excluir matéria ${subject.subject}" title="Excluir matéria">
+                  <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
+              </div>
+              ${schoolTeachers.length ? `
+                <div class="flex flex-wrap gap-2">
+                  ${schoolTeachers.map(teacher => {
+                    const isAssigned = (subject.teacherIds || []).includes(teacher.uid);
+                    return `
+                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border ${isAssigned ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-600'} px-3 py-1.5 text-xs font-bold">
+                        <input type="checkbox" ${isAssigned ? 'checked' : ''} onchange="actions.setTeacherSubject('${subject.id}', '${teacher.uid}', this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                        ${teacher.displayName || teacher.email}
+                      </label>
+                    `;
+                  }).join('')}
+                </div>
+              ` : '<p class="text-xs font-medium text-slate-400">Cadastre professores nesta escola para vinculá-los às matérias.</p>'}
+            </div>
+          `).join('')}
+        </div>
+      `}
+    </section>
+  `;
+};
+
 const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
   const canManageAllRoles = viewerRole === 'admin' || viewerRole === 'dev';
   const users = [...allUsers]
     .filter(account => canManageAllRoles || !['admin', 'dev'].includes(account.role))
     .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+  const selectableUserIds = users.filter(account => account.uid !== user?.uid).map(account => account.uid);
+  const selectedCount = selectableUserIds.filter(uid => selectedUserIds.has(uid)).length;
+  const allUsersSelected = selectableUserIds.length > 0 && selectedCount === selectableUserIds.length;
 
   const roleOptions = canManageAllRoles
     ? ['teacher', 'diretor', 'admin', 'dev']
@@ -1641,11 +1722,25 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
         </div>
       </div>
 
+      ${selectedCount > 0 ? `
+        <div class="flex flex-col gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <p class="text-sm font-bold text-rose-800">${selectedCount} conta${selectedCount === 1 ? '' : 's'} selecionada${selectedCount === 1 ? '' : 's'} para exclusão.</p>
+          <button type="button" onclick="actions.deleteSelectedUsers()" class="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-xs font-black text-white hover:bg-rose-700">
+            <i data-lucide="trash-2" class="h-4 w-4"></i> Excluir selecionados
+          </button>
+        </div>
+      ` : ''}
+
+      ${['admin', 'dev', 'diretor'].includes(viewerRole) ? TeacherSubjectAssignments({ viewerRole }) : ''}
+
       <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full min-w-[820px] text-left">
             <thead class="bg-slate-50 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 border-b border-slate-200">
               <tr>
+                <th class="w-12 px-4 py-4">
+                  <input type="checkbox" aria-label="Selecionar todos os usuários" ${allUsersSelected ? 'checked' : ''} ${selectableUserIds.length ? '' : 'disabled'} onchange="actions.toggleAllUsers(this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                </th>
                 <th class="px-6 py-4">Nome</th>
                 <th class="px-6 py-4">E-mail</th>
                 <th class="px-6 py-4">Perfil</th>
@@ -1656,10 +1751,13 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
             <tbody class="divide-y divide-slate-100">
               ${users.length === 0 ? `
                 <tr>
-                  <td colspan="5" class="px-6 py-10 text-center text-sm text-slate-500 font-medium">Nenhum usuário encontrado.</td>
+                  <td colspan="6" class="px-6 py-10 text-center text-sm text-slate-500 font-medium">Nenhum usuário encontrado.</td>
                 </tr>
               ` : users.map(u => `
                 <tr class="hover:bg-slate-50 transition-colors">
+                  <td class="px-4 py-6">
+                    <input type="checkbox" aria-label="Selecionar ${u.email || u.displayName || 'usuário'}" ${selectedUserIds.has(u.uid) ? 'checked' : ''} ${u.uid === user?.uid ? 'disabled' : ''} onchange="actions.toggleUserSelection('${u.uid}', this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-40">
+                  </td>
                   <td class="px-6 py-4">
                     <div class="flex items-center gap-3">
                       <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-black flex items-center justify-center uppercase">
@@ -1686,7 +1784,7 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
                       </select>
                     `}
                   </td>
-                  <td class="px-6 py-4 text-sm text-slate-600 font-medium">${u.subject || '—'}</td>
+                  <td class="px-6 py-4 text-sm text-slate-600 font-medium">${schoolSubjects.filter(subject => (subject.teacherIds || []).includes(u.uid)).map(subject => subject.subject).join(', ') || '—'}</td>
                   <td class="px-6 py-4 text-right">
                     <button
                       onclick="actions.deleteUser('${u.uid}', '${(u.displayName || 'Usuário').replace(/'/g, "\\'")}', '${u.email || 'usuário'}')"
@@ -2443,6 +2541,7 @@ const actions = {
     const modal = $('#create-modal');
     if (modal) {
       modal.classList.remove('hidden');
+      this.updateScheduleSubjectOptions($('#form-teacher')?.value || '');
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
   },
@@ -2467,6 +2566,7 @@ const actions = {
       $('#edit-form-end').value = s.endTime || '22:45';
       $('#edit-form-teacher').value = s.teacherId || '';
       $('#edit-form-status').value = s.status || 'pending';
+      this.updateScheduleSubjectOptions(s.teacherId || '', s.subject || '', 'edit-form');
       modal.classList.remove('hidden');
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
@@ -2489,6 +2589,16 @@ const actions = {
   hideDeleteModal() {
     const modal = $('#delete-modal');
     if (modal) modal.classList.add('hidden');
+  },
+
+  updateScheduleSubjectOptions(teacherId, selectedSubject = '', prefix = 'form') {
+    const subjectInput = $(`#${prefix}-subject`);
+    const subjectOptions = $(`#${prefix}-subject-options`);
+    if (!subjectInput || !subjectOptions) return;
+
+    const options = getAssignedSubjectsForTeacher(teacherId);
+    subjectOptions.innerHTML = options.map(subject => `<option value="${subject}"></option>`).join('');
+    subjectInput.value = selectedSubject || '';
   },
 
   async confirmDeleteSchedule() {
@@ -2691,13 +2801,18 @@ const actions = {
           api.get('/api/users'),
           api.get('/api/labs/bookings'),
           api.get('/api/certificates'),
-          api.get('/api/schools')
+          api.get('/api/schools'),
+          api.get('/api/school-subjects')
         ]);
-        const [s, t, u, lb, c, sc] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, t, u, lb, c, sc, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         teachers = t || [];
         allUsers = u || [];
         schools = sc || [];
+        schoolSubjects = subs || [];
+        if (!schools.some(school => school.id === subjectSchoolId)) {
+          subjectSchoolId = user.school_id || schools[0]?.id || '';
+        }
         stats = {
           total: schedules.length,
           confirmed: schedules.filter(item => item.status === 'confirmed').length,
@@ -2712,12 +2827,14 @@ const actions = {
           api.get('/api/teachers'),
           api.get(`/api/users?schoolId=${user.school_id}`),
           api.get('/api/labs/bookings'),
-          api.get('/api/certificates')
+          api.get('/api/certificates'),
+          api.get('/api/school-subjects')
         ]);
-        const [s, t, u, lb, c] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, t, u, lb, c, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         teachers = t || [];
         allUsers = u || [];
+        schoolSubjects = subs || [];
         stats = {
           total: schedules.length,
           confirmed: schedules.filter(item => item.status === 'confirmed').length,
@@ -2736,6 +2853,7 @@ const actions = {
         const [s, lb, c, m] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         allUsers = [];
+        schoolSubjects = [];
         labBookings = lb || [];
         certificates = c || [];
         window.teacherSubjects = m || [];
@@ -2752,6 +2870,20 @@ const actions = {
     this.init();
   },
 
+  toggleUserSelection(uid, checked) {
+    if (!uid || uid === user?.uid || !allUsers.some(account => account.uid === uid)) return;
+    if (checked) selectedUserIds.add(uid);
+    else selectedUserIds.delete(uid);
+    this.renderCurrentView();
+  },
+
+  toggleAllUsers(checked) {
+    const selectableUsers = allUsers.filter(account => account.uid !== user?.uid);
+    if (checked) selectableUsers.forEach(account => selectedUserIds.add(account.uid));
+    else selectableUsers.forEach(account => selectedUserIds.delete(account.uid));
+    this.renderCurrentView();
+  },
+
   async deleteUser(uid, name, email) {
     if (!uid) return;
     const confirmed = await showDialog(`Deseja excluir ${name} (${email}) do sistema? Essa ação remove o acesso do usuário e sua conta de autenticação.`, { confirm: true, title: 'Excluir usuário' });
@@ -2759,11 +2891,95 @@ const actions = {
 
     try {
       await api.delete(`/api/users/${uid}`);
+      selectedUserIds.delete(uid);
       await this.refreshData();
       this.init();
       showDialog('Usuário excluído com sucesso.');
     } catch (err) {
       showDialog(err.message || 'Erro ao excluir usuário.');
+    }
+  },
+
+  async deleteSelectedUsers() {
+    const selectedUsers = allUsers.filter(account => selectedUserIds.has(account.uid) && account.uid !== user?.uid);
+    if (selectedUsers.length === 0) return;
+
+    const emails = selectedUsers.map(account => account.email || account.displayName || account.uid).join('\n');
+    const confirmed = await showDialog(
+      `Confirma excluir ${selectedUsers.length} conta${selectedUsers.length === 1 ? '' : 's'}? Esta ação não pode ser desfeita.\n\n${emails}`,
+      { confirm: true, title: 'Excluir contas selecionadas' }
+    );
+    if (!confirmed) return;
+
+    const failed = [];
+    for (const account of selectedUsers) {
+      try {
+        await api.delete(`/api/users/${account.uid}`);
+        selectedUserIds.delete(account.uid);
+      } catch (err) {
+        failed.push(`${account.email || account.displayName || account.uid}: ${err.message || 'falha ao excluir'}`);
+      }
+    }
+
+    await this.refreshData();
+    this.renderCurrentView();
+    if (failed.length > 0) {
+      showDialog(`Não foi possível excluir todas as contas. As contas com erro continuam selecionadas para você tentar novamente:\n\n${failed.join('\n')}`, { title: 'Exclusão parcial' });
+    } else {
+      showDialog(`${selectedUsers.length} conta${selectedUsers.length === 1 ? '' : 's'} excluída${selectedUsers.length === 1 ? '' : 's'} com sucesso.`);
+    }
+  },
+
+  selectSubjectSchool(schoolId) {
+    subjectSchoolId = schoolId;
+    this.renderCurrentView();
+  },
+
+  async createSchoolSubject(event) {
+    event.preventDefault();
+    const subjectInput = $('#school-subject-name');
+    const schoolId = user?.role === 'diretor' ? user.school_id : (subjectSchoolId || user?.school_id);
+    const subject = subjectInput?.value?.trim();
+    if (!schoolId || !subject) return showDialog('Selecione uma escola e informe a matéria.');
+
+    try {
+      await api.post('/api/school-subjects', { schoolId, subject });
+      await this.refreshData();
+      this.renderCurrentView();
+    } catch (err) {
+      showDialog(err.message || 'Erro ao adicionar matéria.');
+    }
+  },
+
+  async deleteSchoolSubject(subjectId, subjectName) {
+    const confirmed = await showDialog(
+      `Excluir "${subjectName}" do catálogo? Os horários antigos serão mantidos, mas os vínculos com professores serão removidos.`,
+      { confirm: true, title: 'Excluir matéria' }
+    );
+    if (!confirmed) return;
+
+    try {
+      await api.delete(`/api/school-subjects/${subjectId}`);
+      await this.refreshData();
+      this.renderCurrentView();
+    } catch (err) {
+      showDialog(err.message || 'Erro ao excluir matéria.');
+    }
+  },
+
+  async setTeacherSubject(subjectId, teacherId, isAssigned) {
+    try {
+      if (isAssigned) {
+        await api.post(`/api/school-subjects/${subjectId}/teachers`, { teacherId });
+      } else {
+        await api.delete(`/api/school-subjects/${subjectId}/teachers/${teacherId}`);
+      }
+      await this.refreshData();
+      this.renderCurrentView();
+    } catch (err) {
+      await this.refreshData();
+      this.renderCurrentView();
+      showDialog(err.message || 'Erro ao atualizar vínculo da matéria.');
     }
   },
 

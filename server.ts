@@ -75,12 +75,41 @@ const normalizeSubjects = (subject: unknown): string[] => {
   return [...new Map(subjects.map(entry => [entry.toLocaleLowerCase(), entry])).values()];
 };
 
-const saveTeacherSubjects = async (teacherId: string, subjects: string[]) => {
+const getOrCreateSchoolSubject = async (schoolId: string, subject: string) => {
+  const { data: existingSubjects, error: findError } = await supabase
+    .from('school_subjects')
+    .select('id,subject')
+    .eq('school_id', schoolId);
+  if (findError) return { data: null, error: findError };
+
+  const existing = (existingSubjects || []).find(item => item.subject.toLocaleLowerCase() === subject.toLocaleLowerCase());
+  if (existing) return { data: existing, error: null };
+
+  const { data, error } = await supabase
+    .from('school_subjects')
+    .insert({ school_id: schoolId, subject })
+    .select('id,subject')
+    .single();
+  return { data, error };
+};
+
+const saveTeacherSubjects = async (teacherId: string, schoolId: string | null, subjects: string[]) => {
   if (subjects.length === 0) return null;
-  const { error } = await supabase
-    .from('teacher_subjects')
-    .insert(subjects.map(subject => ({ teacher_id: teacherId, subject })));
-  return error;
+  if (!schoolId) return new Error('O professor precisa estar associado a uma escola para cadastrar matérias.');
+
+  for (const subject of subjects) {
+    const { data: catalogSubject, error: subjectError } = await getOrCreateSchoolSubject(schoolId, subject);
+    if (subjectError || !catalogSubject) return subjectError || new Error('Não foi possível cadastrar a matéria.');
+
+    const { error } = await supabase
+      .from('teacher_subjects')
+      .upsert(
+        { teacher_id: teacherId, subject_id: catalogSubject.id },
+        { onConflict: 'teacher_id,subject_id', ignoreDuplicates: true }
+      );
+    if (error) return error;
+  }
+  return null;
 };
 
 // Security: Rate-limiting em-memória
@@ -195,7 +224,7 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(500).json({ error: `Erro ao atualizar escola: ${updateError.message}` });
     }
 
-    const subjectError = await saveTeacherSubjects(uid, subjects);
+    const subjectError = await saveTeacherSubjects(uid, finalSchoolId, subjects);
     if (subjectError) {
       console.error('[REGISTER] Could not save teacher subjects:', subjectError);
       return res.status(500).json({ error: `Erro ao salvar matérias: ${subjectError.message}` });
@@ -403,7 +432,9 @@ app.post('/api/users/create', async (req, res) => {
     }
 
     if (role === 'teacher') {
-      const subjectError = await saveTeacherSubjects(uid, subjects);
+      const subjectError = role === 'teacher'
+        ? await saveTeacherSubjects(uid, finalSchoolId, subjects)
+        : null;
       if (subjectError) {
         console.error('[CREATE_USER] Could not save teacher subjects:', subjectError);
         return res.status(500).json({ error: `Usuário criado, mas não foi possível salvar as matérias: ${subjectError.message}` });
@@ -574,18 +605,31 @@ app.delete('/api/users/:uid', async (req, res) => {
   const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
   if (!userInfo) return;
   if (req.params.uid === userInfo.uid) return res.status(400).json({ error: 'Não é possível excluir sua própria conta' });
-  if (userInfo.role === 'diretor') {
-    const target = await getUserFromDB(req.params.uid);
-    if (!target || target.school_id !== userInfo.school_id || ['admin', 'dev'].includes(target.role)) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
-  }
 
   const uid = req.params.uid;
+  const { data: target, error: targetError } = await supabase
+    .from('users')
+    .select('uid,school_id,role')
+    .eq('uid', uid)
+    .maybeSingle();
+  if (targetError) return res.status(500).json({ error: 'Erro ao verificar usuário' });
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+  if (userInfo.role === 'diretor' && (target.school_id !== userInfo.school_id || ['admin', 'dev'].includes(target.role))) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
 
-  const { error: authError } = await supabase.auth.admin.deleteUser(uid);
-  if (authError) {
+  const { data: authData, error: authLookupError } = await supabase.auth.admin.getUserById(uid);
+  const authUserNotFound = authLookupError?.status === 404 || authLookupError?.code === 'user_not_found';
+  if (authLookupError && !authUserNotFound) {
     return res.status(500).json({ error: 'Erro ao remover usuário do sistema de autenticação' });
+  }
+  if (authData.user) {
+    const { error: authDeleteError } = await supabase.auth.admin.deleteUser(uid);
+    if (authDeleteError) {
+      return res.status(500).json({ error: 'Erro ao remover usuário do sistema de autenticação' });
+    }
+  } else if (!authUserNotFound) {
+    return res.status(500).json({ error: 'Não foi possível confirmar a conta no sistema de autenticação' });
   }
 
   const { error: dbError } = await supabase.from('users').delete().eq('uid', uid);
@@ -899,7 +943,150 @@ app.delete('/api/schools/:id', async (req, res) => {
   res.json({ status: 'success' });
 });
 
-// Teacher Subjects endpoints
+// School subject catalog and teacher assignments
+app.get('/api/school-subjects', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+
+  const requestedSchoolId = typeof req.query.schoolId === 'string' ? req.query.schoolId : undefined;
+  if (userInfo.role === 'diretor' && !userInfo.school_id) {
+    return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+  }
+  if (userInfo.role === 'diretor' && requestedSchoolId && requestedSchoolId !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  let query = supabase.from('school_subjects').select('id,school_id,subject').order('subject', { ascending: true });
+  const schoolId = userInfo.role === 'diretor' ? userInfo.school_id : requestedSchoolId;
+  if (schoolId) query = query.eq('school_id', schoolId);
+  const { data: subjects, error } = await query;
+  if (error) return res.status(500).json({ error: 'Erro ao buscar matérias da escola' });
+
+  const subjectIds = (subjects || []).map(subject => subject.id);
+  const { data: assignments, error: assignmentError } = subjectIds.length
+    ? await supabase.from('teacher_subjects').select('subject_id,teacher_id').in('subject_id', subjectIds)
+    : { data: [], error: null };
+  if (assignmentError) return res.status(500).json({ error: 'Erro ao buscar professores das matérias' });
+
+  const teacherIdsBySubject = new Map<number, string[]>();
+  for (const assignment of assignments || []) {
+    const assigned = teacherIdsBySubject.get(assignment.subject_id) || [];
+    assigned.push(assignment.teacher_id);
+    teacherIdsBySubject.set(assignment.subject_id, assigned);
+  }
+
+  res.json((subjects || []).map(subject => ({
+    ...transformKeys(subject),
+    teacherIds: teacherIdsBySubject.get(subject.id) || []
+  })));
+});
+
+app.post('/api/school-subjects', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+
+  const subject = sanitizeString(req.body.subject);
+  const requestedSchoolId = typeof req.body.schoolId === 'string' ? req.body.schoolId : '';
+  if (userInfo.role === 'diretor' && !userInfo.school_id) {
+    return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+  }
+  const schoolId = userInfo.role === 'diretor' ? userInfo.school_id : requestedSchoolId;
+  if (!subject || !schoolId) return res.status(400).json({ error: 'Escola e matéria são obrigatórias' });
+
+  const { data: existingSubjects, error: findError } = await supabase
+    .from('school_subjects')
+    .select('id,school_id,subject')
+    .eq('school_id', schoolId);
+  if (findError) return res.status(500).json({ error: 'Erro ao verificar matéria' });
+  const existing = (existingSubjects || []).find(item => item.subject.toLocaleLowerCase() === subject.toLocaleLowerCase());
+  if (existing) return res.status(409).json({ error: 'Essa matéria já está cadastrada na escola' });
+
+  const { data, error } = await supabase
+    .from('school_subjects')
+    .insert({ school_id: schoolId, subject })
+    .select('id,school_id,subject')
+    .single();
+  if (error) return res.status(500).json({ error: `Erro ao cadastrar matéria: ${error.message}` });
+  res.json(transformKeys({ ...data, teacherIds: [] }));
+});
+
+app.delete('/api/school-subjects/:id', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+
+  const { data: subject, error: findError } = await supabase
+    .from('school_subjects')
+    .select('id,school_id')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (findError) return res.status(500).json({ error: 'Erro ao verificar matéria' });
+  if (!subject) return res.status(404).json({ error: 'Matéria não encontrada' });
+  if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  const { error } = await supabase.from('school_subjects').delete().eq('id', req.params.id);
+  if (error) return res.status(500).json({ error: 'Erro ao excluir matéria' });
+  res.json({ status: 'success' });
+});
+
+app.post('/api/school-subjects/:id/teachers', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+  const teacherId = typeof req.body.teacherId === 'string' ? req.body.teacherId : '';
+  if (!teacherId) return res.status(400).json({ error: 'Professor obrigatório' });
+
+  const { data: subject, error: subjectError } = await supabase
+    .from('school_subjects')
+    .select('id,school_id')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (subjectError) return res.status(500).json({ error: 'Erro ao verificar matéria' });
+  if (!subject) return res.status(404).json({ error: 'Matéria não encontrada' });
+  if (userInfo.role === 'diretor' && !userInfo.school_id) {
+    return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+  }
+  if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  const teacher = await getUserFromDB(teacherId);
+  if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== subject.school_id) {
+    return res.status(400).json({ error: 'Selecione um professor da mesma escola' });
+  }
+
+  const { error } = await supabase.from('teacher_subjects').upsert(
+    { teacher_id: teacherId, subject_id: subject.id },
+    { onConflict: 'teacher_id,subject_id', ignoreDuplicates: true }
+  );
+  if (error) return res.status(500).json({ error: 'Erro ao vincular professor à matéria' });
+  res.json({ status: 'success' });
+});
+
+app.delete('/api/school-subjects/:id/teachers/:teacherId', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+
+  const { data: subject, error: subjectError } = await supabase
+    .from('school_subjects')
+    .select('id,school_id')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (subjectError) return res.status(500).json({ error: 'Erro ao verificar matéria' });
+  if (!subject) return res.status(404).json({ error: 'Matéria não encontrada' });
+  if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+
+  const { error } = await supabase.from('teacher_subjects')
+    .delete()
+    .eq('subject_id', subject.id)
+    .eq('teacher_id', req.params.teacherId);
+  if (error) return res.status(500).json({ error: 'Erro ao desvincular professor da matéria' });
+  res.json({ status: 'success' });
+});
+
+// Teacher subject endpoints retained for the teacher's "Minhas Matérias" view.
 app.get('/api/teachers/:uid/subjects', async (req, res) => {
   const userInfo = await validateUserPermission(req);
   if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
@@ -916,12 +1103,19 @@ app.get('/api/teachers/:uid/subjects', async (req, res) => {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
-  const { data, error } = await supabase
+  const { data: assignments, error: assignmentError } = await supabase
     .from('teacher_subjects')
-    .select('id,subject')
-    .eq('teacher_id', req.params.uid)
-    .order('subject', { ascending: true });
+    .select('subject_id')
+    .eq('teacher_id', req.params.uid);
 
+  if (assignmentError) return res.status(500).json({ error: 'Erro ao buscar matérias' });
+  const subjectIds = (assignments || []).map(assignment => assignment.subject_id);
+  if (subjectIds.length === 0) return res.json([]);
+  const { data, error } = await supabase
+    .from('school_subjects')
+    .select('id,subject')
+    .in('id', subjectIds)
+    .order('subject', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar matérias' });
   res.json(data);
 });
@@ -940,26 +1134,23 @@ app.post('/api/teachers/:uid/subjects', async (req, res) => {
     }
   }
 
-  let { subject } = req.body;
-  subject = sanitizeString(subject);
+  const subject = sanitizeString(req.body.subject);
 
   if (!subject) {
     return res.status(400).json({ error: 'Matéria é obrigatória' });
   }
 
-  const { data, error } = await supabase
-    .from('teacher_subjects')
-    .insert({ teacher_id: req.params.uid, subject })
-    .select();
+  const teacher = await getUserFromDB(req.params.uid);
+  if (!teacher?.school_id) return res.status(400).json({ error: 'Professor não está associado a uma escola' });
+  const { data: catalogSubject, error: subjectError } = await getOrCreateSchoolSubject(teacher.school_id, subject);
+  if (subjectError || !catalogSubject) return res.status(500).json({ error: 'Erro ao cadastrar matéria da escola' });
 
-  if (error) {
-    if (error.message.includes('duplicate')) {
-      return res.status(409).json({ error: 'Matéria já existe' });
-    }
-    return res.status(500).json({ error: 'Erro ao adicionar matéria' });
-  }
-
-  res.json(data[0]);
+  const { error } = await supabase.from('teacher_subjects').upsert(
+    { teacher_id: req.params.uid, subject_id: catalogSubject.id },
+    { onConflict: 'teacher_id,subject_id', ignoreDuplicates: true }
+  );
+  if (error) return res.status(500).json({ error: 'Erro ao vincular matéria ao professor' });
+  res.json(catalogSubject);
 });
 
 app.delete('/api/teachers/:uid/subjects/:subject', async (req, res) => {
@@ -976,11 +1167,21 @@ app.delete('/api/teachers/:uid/subjects/:subject', async (req, res) => {
     }
   }
 
+  const teacher = await getUserFromDB(req.params.uid);
+  if (!teacher?.school_id) return res.status(400).json({ error: 'Professor não está associado a uma escola' });
+  const { data: catalogSubjects, error: findError } = await supabase
+    .from('school_subjects')
+    .select('id')
+    .eq('school_id', teacher.school_id)
+    .eq('subject', req.params.subject);
+  if (findError) return res.status(500).json({ error: 'Erro ao buscar matéria' });
+  const subjectIds = (catalogSubjects || []).map(subject => subject.id);
+  if (subjectIds.length === 0) return res.json({ status: 'success' });
   const { error } = await supabase
     .from('teacher_subjects')
     .delete()
     .eq('teacher_id', req.params.uid)
-    .eq('subject', req.params.subject);
+    .in('subject_id', subjectIds);
 
   if (error) return res.status(500).json({ error: 'Erro ao deletar matéria' });
   res.json({ status: 'success' });
