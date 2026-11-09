@@ -137,7 +137,7 @@ const api = {
         'Content-Type': 'application/json',
         ...options.headers,
       };
-      if (user?.uid) headers['X-User-ID'] = user.uid;
+      if (user?.accessToken) headers.Authorization = `Bearer ${user.accessToken}`;
 
       res = await fetch(fullUrl, {
         ...options,
@@ -162,6 +162,7 @@ const api = {
             headers: {
               'Content-Type': 'application/json',
               ...options.headers,
+              ...(user?.accessToken ? { Authorization: `Bearer ${user.accessToken}` } : {}),
             },
           });
           // Update base url so future requests are faster
@@ -176,6 +177,29 @@ const api = {
         }
       } else {
         throw new Error(`Erro de conexão com o servidor de API (${fullUrl}).`);
+      }
+    }
+
+    if (res.status === 401 && user?.refreshToken && !url.startsWith('/api/auth/')) {
+      try {
+        const refreshResponse = await fetch(getApiUrl('/api/auth/refresh'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: user.refreshToken })
+        });
+        const refreshed = await refreshResponse.json();
+        if (refreshResponse.ok) {
+          user = { ...user, accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken };
+          localStorage.setItem('user', JSON.stringify(user));
+          const retryHeaders = {
+            'Content-Type': 'application/json',
+            ...options.headers,
+            Authorization: `Bearer ${user.accessToken}`
+          };
+          res = await fetch(fullUrl, { ...options, headers: retryHeaders });
+        }
+      } catch (refreshError) {
+        console.error('Session refresh failed:', refreshError);
       }
     }
 
@@ -1202,12 +1226,13 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Cargo</label>
           <select id="user-role" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
-            ${viewerRole === 'admin'
+            ${viewerRole === 'admin' || viewerRole === 'dev'
               ? `
                 <option value="">Selecione um cargo</option>
                 <option value="teacher">Professor</option>
                 <option value="diretor">Diretor</option>
                 <option value="admin">Administrador</option>
+                <option value="dev">Desenvolvedor</option>
               `
               : `
                 <option value="">Selecione um cargo</option>
@@ -1429,6 +1454,7 @@ const ADMIN_NAV_ITEMS = [
 ];
 
 const DIRETOR_NAV_ITEMS = ADMIN_NAV_ITEMS.filter(item => item.id !== 'overview' && item.id !== 'escolas');
+const DEV_NAV_ITEMS = ADMIN_NAV_ITEMS;
 
 const AdminView = () => `
   <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
@@ -1481,6 +1507,57 @@ const AdminView = () => `
   </div>
 `;
 
+const DeveloperView = () => `
+  <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
+    ${Sidebar({ theme: 'dark', sectionLabel: 'Desenvolvedor', navItems: DEV_NAV_ITEMS })}
+    ${MobileDrawer({ theme: 'dark', sectionLabel: 'Desenvolvedor', navItems: DEV_NAV_ITEMS, drawerId: 'dev-mobile-sidebar-drawer' })}
+
+    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden print:bg-white print:overflow-visible">
+      <header class="h-20 bg-white border-b border-slate-200 px-6 md:px-10 flex items-center justify-between shrink-0 print:hidden">
+        <div class="flex items-center gap-3">
+          <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-dev-toggle-menu">
+            <i data-lucide="menu" class="w-6 h-6"></i>
+          </button>
+          <div>
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Área do desenvolvedor</p>
+            <h2 class="font-black text-base md:text-lg text-slate-900">Console Studia</h2>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          ${currentTab === 'horarios' ? `
+            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all">
+              <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo Horário</span>
+            </button>
+          ` : ''}
+          ${currentTab === 'labs' ? `
+            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all">
+              <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
+            </button>
+          ` : ''}
+          <span class="hidden md:inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em]"><i data-lucide="code-2" class="w-3.5 h-3.5"></i> Desenvolvedor</span>
+        </div>
+      </header>
+
+      <div class="p-4 md:p-10 flex-1 overflow-y-auto space-y-6 md:space-y-8 print:p-0">
+        ${currentTab === 'overview' ? AdminOverviewTab() : ''}
+        ${currentTab === 'escolas' ? EscolasTab() : ''}
+        ${currentTab === 'horarios' ? HorariosTab() : ''}
+        ${currentTab === 'labs' ? LabsTab() : ''}
+        ${currentTab === 'atestados' ? AtestadosTab() : ''}
+        ${currentTab === 'usuarios' ? UsersTab({ viewerRole: 'dev' }) : ''}
+        ${currentTab === 'relatorios' ? RelatoriosTab() : ''}
+      </div>
+    </main>
+
+    ${CreateModal()}
+    ${CertModal()}
+    ${EditModal()}
+    ${DeleteConfirmModal()}
+    ${CreateEscolaModal()}
+    ${CreateUserModal({ viewerRole: 'dev' })}
+  </div>
+`;
+
 const DiretorView = () => `
   <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
     ${Sidebar({ theme: 'light', sectionLabel: 'Diretor', navItems: DIRETOR_NAV_ITEMS })}
@@ -1529,18 +1606,20 @@ const DiretorView = () => `
 `;
 
 const ROLE_META = {
+  dev: { badge: 'bg-emerald-100 text-emerald-700', label: 'Desenvolvedor' },
   admin: { badge: 'bg-violet-100 text-violet-700', label: 'Administrador' },
   diretor: { badge: 'bg-amber-100 text-amber-700', label: 'Diretor' },
   teacher: { badge: 'bg-blue-100 text-blue-700', label: 'Professor' },
 };
 
 const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
+  const canManageAllRoles = viewerRole === 'admin' || viewerRole === 'dev';
   const users = [...allUsers]
-    .filter(account => viewerRole === 'admin' || account.role !== 'admin')
+    .filter(account => canManageAllRoles || !['admin', 'dev'].includes(account.role))
     .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
 
-  const roleOptions = viewerRole === 'admin'
-    ? ['teacher', 'diretor', 'admin']
+  const roleOptions = canManageAllRoles
+    ? ['teacher', 'diretor', 'admin', 'dev']
     : ['teacher', 'diretor'];
 
   return `
@@ -1548,10 +1627,10 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
       <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 class="text-2xl font-black text-slate-900">Gestão de usuários</h3>
-          <p class="text-sm text-slate-500 font-medium">${viewerRole === 'admin' ? 'Todas as contas cadastradas no sistema.' : 'Diretores e professores cadastrados no sistema.'}</p>
+          <p class="text-sm text-slate-500 font-medium">${canManageAllRoles ? 'Todas as contas cadastradas no sistema.' : 'Diretores e professores cadastrados na sua escola.'}</p>
         </div>
         <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-          ${(viewerRole === 'admin' || viewerRole === 'diretor') ? `
+          ${(canManageAllRoles || viewerRole === 'diretor') ? `
             <button onclick="actions.showCreateUserModal('${viewerRole}')" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
               <i data-lucide="plus" class="w-4 h-4"></i> Criar Usuário
             </button>
@@ -1817,7 +1896,7 @@ const LabsTab = () => `
           <h4 class="text-lg font-black text-slate-800">Tabela Geral do Cronograma das Reservas</h4>
           <p class="text-xs text-slate-500 font-bold">Acompanhe todos os agendamentos cadastrados no sistema.</p>
         </div>
-        ${labBookings.length > 0 ? `
+        ${labBookings.length > 0 && ['admin', 'dev'].includes(user.role) ? `
           <button onclick="actions.clearAllLabBookings()" class="text-rose-600 hover:text-rose-700 font-bold text-xs flex items-center gap-1.5 border border-rose-200 bg-rose-50 hover:bg-rose-100 px-4 py-2 rounded-xl transition-all shadow-sm">
             <i data-lucide="trash-2" class="w-4 h-4"></i> Limpar Tabela
           </button>
@@ -1852,7 +1931,7 @@ const LabsTab = () => `
                     </span>
                   </td>
                   <td class="px-8 py-5 text-center">
-                    ${(user.role === 'admin' || user.role === 'diretor' || b.teacherId === user.uid) ? `
+                    ${(user.role === 'admin' || user.role === 'dev' || user.role === 'diretor' || b.teacherId === user.uid) ? `
                       <button onclick="actions.deleteLabBooking(${b.id})" class="text-slate-300 hover:text-rose-500 transition-all cursor-pointer inline-flex items-center" title="Cancelar Reserva">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
@@ -2264,6 +2343,7 @@ const slidesContent = [
 // --- ACTIONS ---
 const TAB_ACCESS = {
   admin: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
+  dev: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   diretor: ['horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   teacher: ['horarios', 'labs', 'materias', 'atestados'],
 };
@@ -2288,10 +2368,16 @@ const actions = {
   renderCurrentView() {
     // Re-render apenas a view atual sem recarregar dados (otimização de performance)
     try {
+      if (user && !user.accessToken) {
+        localStorage.removeItem('user');
+        user = null;
+      }
       if (!user) {
         render(LandingView());
       } else {
-        if (user.role === 'admin') {
+        if (user.role === 'dev') {
+          render(DeveloperView());
+        } else if (user.role === 'admin') {
           render(AdminView());
         } else if (user.role === 'diretor') {
           render(DiretorView());
@@ -2598,7 +2684,7 @@ const actions = {
     if (!user || isRefreshingData) return;
     isRefreshingData = true;
     try {
-      if (user.role === 'admin') {
+      if (user.role === 'admin' || user.role === 'dev') {
         const results = await Promise.allSettled([
           api.get(`/api/schedules?schoolId=${user.school_id}`),
           api.get('/api/teachers'),

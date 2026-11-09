@@ -37,7 +37,7 @@ const columnMap: {[key: string]: string} = {
   classgroup: 'classGroup',
   labid: 'labId',
   displayname: 'displayName',
-  school_id: 'schoolId',
+  school_id: 'school_id',
   createdat: 'createdAt',
   updatedat: 'updatedAt'
 };
@@ -96,13 +96,12 @@ app.use(express.json({ limit: '10mb' }));
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    let { email, password, displayName, subject, school_id, role } = req.body;
+    let { email, password, displayName, subject, school_id } = req.body;
 
     // Sanitizar entrada
     email = sanitizeEmail(email);
     displayName = sanitizeString(displayName);
     subject = sanitizeString(subject);
-    role = sanitizeString(role);
 
     // Rate-limit: máx 3 registros por minuto por IP
     const ip = req.ip || 'unknown';
@@ -119,7 +118,7 @@ app.post('/api/auth/register', async (req, res) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { displayName, role: role || 'teacher', subject },
+      user_metadata: { displayName, role: 'teacher', subject },
     });
 
     if (authError || !authData.user) {
@@ -130,7 +129,7 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     const uid = authData.user.id;
-    const finalRole = role || 'teacher';
+    const finalRole = 'teacher';
     const finalSchoolId = school_id || DEFAULT_SCHOOL_ID;
 
     console.log('[REGISTER] Step 2: Creating user (without school_id)...');
@@ -177,7 +176,17 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(500).json({ error: `Erro ao atualizar escola: ${updateError.message}` });
     }
 
-    res.json(transformKeys(userData));
+    const { data: sessionData, error: sessionError } = await supabaseAuth.auth.signInWithPassword({ email, password });
+    if (sessionError || !sessionData.session) {
+      console.error('[REGISTER] Could not create authenticated session:', sessionError);
+      return res.status(500).json({ error: 'Conta criada, mas não foi possível iniciar a sessão. Faça login.' });
+    }
+
+    res.json({
+      ...transformKeys(userData),
+      accessToken: sessionData.session.access_token,
+      refreshToken: sessionData.session.refresh_token
+    });
   } catch (err) {
     console.error('Register error:', err);
     res.status(500).json({ error: 'Erro interno ao registrar' });
@@ -216,7 +225,11 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     console.log('[LOGIN] User found, role:', userData.role);
-    res.json(transformKeys(userData));
+    res.json({
+      ...transformKeys(userData),
+      accessToken: authData.session.access_token,
+      refreshToken: authData.session.refresh_token
+    });
   } catch (err) {
     console.error('[LOGIN] Fallback to fetch:', err.message);
     // Fallback: usar fetch direto sem select=*
@@ -235,13 +248,36 @@ app.post('/api/auth/login', async (req, res) => {
 
     const data = await response.json();
     if (!data || data.length === 0) return res.status(401).json({ error: 'Credenciais inválidas' });
-    res.json(transformKeys(data[0]));
+    res.json({
+      ...transformKeys(data[0]),
+      accessToken: authData.session.access_token,
+      refreshToken: authData.session.refresh_token
+    });
   }
+});
+
+app.post('/api/auth/refresh', async (req, res) => {
+  const { refreshToken } = req.body;
+  if (typeof refreshToken !== 'string' || !refreshToken) {
+    return res.status(400).json({ error: 'Token de atualização obrigatório' });
+  }
+
+  const { data, error } = await supabaseAuth.auth.refreshSession({ refresh_token: refreshToken });
+  if (error || !data.session) {
+    return res.status(401).json({ error: 'Sessão expirada. Faça login novamente.' });
+  }
+
+  res.json({
+    accessToken: data.session.access_token,
+    refreshToken: data.session.refresh_token
+  });
 });
 
 app.post('/api/users/create', async (req, res) => {
   let { email, password, displayName, subject, role, schoolId } = req.body;
-  const { userRole, userSchoolId } = req.body; // Quem está criando (extraído do JWT/session)
+  const creator = await validateUserPermission(req);
+  if (!creator) return res.status(401).json({ error: 'Não autorizado' });
+  const { role: userRole, school_id: userSchoolId } = creator;
 
   // Sanitizar entrada
   email = sanitizeEmail(email);
@@ -265,13 +301,13 @@ app.post('/api/users/create', async (req, res) => {
 
   // VALIDAÇÕES DE PERMISSÃO
   // Admin pode criar qualquer um
-  if (userRole === 'admin') {
+  if (userRole === 'admin' || userRole === 'dev') {
     // OK - criar qualquer role
   }
   // Diretor pode criar diretor/professor da mesma escola
   else if (userRole === 'diretor') {
-    if (role === 'admin') {
-      return res.status(403).json({ error: 'Diretor não pode criar admin' });
+    if (role === 'admin' || role === 'dev') {
+      return res.status(403).json({ error: 'Diretor não pode criar administradores ou desenvolvedores' });
     }
     if (schoolId && schoolId !== userSchoolId) {
       return res.status(403).json({ error: 'Diretor só pode criar usuários da mesma escola' });
@@ -301,7 +337,7 @@ app.post('/api/users/create', async (req, res) => {
     }
 
     const uid = authData.user.id;
-    const finalSchoolId = schoolId || (userRole === 'diretor' ? userSchoolId : DEFAULT_SCHOOL_ID);
+    const finalSchoolId = userRole === 'diretor' ? userSchoolId : (schoolId || DEFAULT_SCHOOL_ID);
 
     // Inserir na tabela users (sem school_id primeiro)
     const insertResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=*`, {
@@ -348,7 +384,6 @@ app.post('/api/users/create', async (req, res) => {
 });
 
 app.get('/api/schedules', async (req, res) => {
-  // Server-side permission validation
   const userInfo = await validateUserPermission(req);
   if (!userInfo) {
     return res.status(401).json({ error: 'Não autorizado' });
@@ -356,17 +391,19 @@ app.get('/api/schedules', async (req, res) => {
 
   let query = supabase.from('schedules').select('*');
 
-  if (req.query.teacherId) {
-    // Se é um professor, só pode ver seus próprios horários
-    if (userInfo.role === 'teacher' && req.query.teacherId !== userInfo.uid) {
+  if (userInfo.role === 'teacher') {
+    if (req.query.teacherId && req.query.teacherId !== userInfo.uid) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
+    query = query.eq('teacherid', userInfo.uid);
+  } else if (userInfo.role === 'diretor') {
+    if (req.query.schoolId && req.query.schoolId !== userInfo.school_id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+    query = query.eq('school_id', userInfo.school_id);
+  } else if (req.query.teacherId) {
     query = query.eq('teacherid', req.query.teacherId);
   } else if (req.query.schoolId) {
-    // Se é um diretor, só pode ver sua própria escola
-    if (userInfo.role === 'diretor' && req.query.schoolId !== userInfo.school_id) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
     query = query.eq('school_id', req.query.schoolId);
   }
 
@@ -377,7 +414,18 @@ app.get('/api/schedules', async (req, res) => {
 });
 
 app.post('/api/schedules', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
   const { date, startTime, endTime, subject, room, teacherId, teacherName, classGroup, school_id } = req.body;
+  if (userInfo.role === 'diretor' && school_id && school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'diretor') {
+    const teacher = teacherId ? await getUserFromDB(teacherId) : null;
+    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+      return res.status(403).json({ error: 'O horário deve pertencer a um professor da sua escola' });
+    }
+  }
   const { data, error } = await supabase.from('schedules').insert({
     date,
     starttime: startTime,
@@ -388,13 +436,26 @@ app.post('/api/schedules', async (req, res) => {
     teachername: teacherName,
     classgroup: classGroup,
     status: 'pending',
-    school_id: school_id || DEFAULT_SCHOOL_ID
+    school_id: userInfo.role === 'diretor' ? userInfo.school_id : (school_id || DEFAULT_SCHOOL_ID)
   }).select('id').single();
   if (error) return res.status(500).json({ error: 'Erro ao criar horário' });
   res.json({ id: data.id, status: 'success' });
 });
 
 app.patch('/api/schedules/:id', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+  if (userInfo.role === 'diretor') {
+    const { data: schedule, error: findError } = await supabase.from('schedules').select('school_id').eq('id', req.params.id).maybeSingle();
+    if (findError) return res.status(500).json({ error: 'Erro ao verificar horário' });
+    if (!schedule || schedule.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
+    if (req.body.teacherId) {
+      const teacher = await getUserFromDB(req.body.teacherId);
+      if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+        return res.status(403).json({ error: 'O horário deve pertencer a um professor da sua escola' });
+      }
+    }
+  }
   const { status, date, startTime, endTime, subject, room, teacherId, teacherName, classGroup } = req.body;
   const onlyStatus = status !== undefined && date === undefined && startTime === undefined && endTime === undefined && subject === undefined && room === undefined && teacherId === undefined && teacherName === undefined && classGroup === undefined;
   const updates = onlyStatus
@@ -417,23 +478,29 @@ app.patch('/api/schedules/:id', async (req, res) => {
 });
 
 app.delete('/api/schedules/:id', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+  if (userInfo.role === 'diretor') {
+    const { data: schedule, error: findError } = await supabase.from('schedules').select('school_id').eq('id', req.params.id).maybeSingle();
+    if (findError) return res.status(500).json({ error: 'Erro ao verificar horário' });
+    if (!schedule || schedule.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
+  }
   const { error } = await supabase.from('schedules').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao excluir horário' });
   res.json({ status: 'success' });
 });
 
-app.get('/api/stats', async (_req, res) => {
+app.get('/api/stats', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
   const { data, error } = await supabase.from('schedules').select('status');
   if (error) return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
   res.json({ total: data.length, confirmed: data.filter(item => item.status === 'confirmed').length, absent: data.filter(item => item.status === 'absent').length, pending: data.filter(item => item.status === 'pending').length });
 });
 
 app.get('/api/teachers', async (req, res) => {
-  // Server-side permission validation
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
 
   let query = supabase.from('users').select('*').eq('role', 'teacher');
 
@@ -449,23 +516,19 @@ app.get('/api/teachers', async (req, res) => {
 });
 
 app.get('/api/users', async (req, res) => {
-  // Server-side permission validation
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) {
-    return res.status(401).json({ error: 'Não autorizado' });
-  }
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
 
   let query = supabase.from('users').select('*').order('displayname', { ascending: true });
 
-  if (req.query.schoolId) {
-    // Diretor só pode ver usuários da sua própria escola
-    if (userInfo.role === 'diretor' && req.query.schoolId !== userInfo.school_id) {
+  if (userInfo.role === 'diretor') {
+    if (req.query.schoolId && req.query.schoolId !== userInfo.school_id) {
       return res.status(403).json({ error: 'Acesso negado' });
     }
-    query = query.eq('school_id', req.query.schoolId);
-  } else if (userInfo.role === 'diretor') {
-    // Se é diretor e não passou schoolId, filtrar por sua escola
     query = query.eq('school_id', userInfo.school_id);
+    query = query.not('role', 'in', '("admin","dev")');
+  } else if (req.query.schoolId) {
+    query = query.eq('school_id', req.query.schoolId);
   }
 
   const { data, error } = await query;
@@ -474,6 +537,16 @@ app.get('/api/users', async (req, res) => {
 });
 
 app.delete('/api/users/:uid', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
+  if (req.params.uid === userInfo.uid) return res.status(400).json({ error: 'Não é possível excluir sua própria conta' });
+  if (userInfo.role === 'diretor') {
+    const target = await getUserFromDB(req.params.uid);
+    if (!target || target.school_id !== userInfo.school_id || ['admin', 'dev'].includes(target.role)) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+  }
+
   const uid = req.params.uid;
 
   const { error: authError } = await supabase.auth.admin.deleteUser(uid);
@@ -490,11 +563,15 @@ app.delete('/api/users/:uid', async (req, res) => {
 });
 
 // Server-side permission validation
+type AppRole = 'teacher' | 'diretor' | 'admin' | 'dev';
+
 interface UserInfo {
   uid: string;
-  role: 'teacher' | 'diretor' | 'admin';
+  role: AppRole;
   school_id?: string;
 }
+
+const VALID_ROLES: AppRole[] = ['teacher', 'diretor', 'admin', 'dev'];
 
 const getUserFromDB = async (uid: string): Promise<UserInfo | null> => {
   const { data, error } = await supabase
@@ -512,48 +589,54 @@ const getUserFromDB = async (uid: string): Promise<UserInfo | null> => {
 };
 
 const validateUserPermission = async (req: any, requiredRole?: string[]): Promise<UserInfo | null> => {
-  const userId = req.headers['x-user-id'] as string;
+  const authorization = req.headers.authorization as string | undefined;
+  const accessToken = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
 
-  if (!userId) {
-    return null; // Sem UID = sem permissão
-  }
+  if (!accessToken) return null;
 
-  const userInfo = await getUserFromDB(userId);
+  const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
+  if (authError || !authData.user) return null;
 
-  if (!userInfo) {
-    return null; // Usuário não encontrado
-  }
+  const userInfo = await getUserFromDB(authData.user.id);
 
-  // Se role específica é requerida, validar
-  if (requiredRole && !requiredRole.includes(userInfo.role)) {
-    return null; // Usuário não tem a role necessária
-  }
+  if (!userInfo) return null;
+
+  if (requiredRole && !requiredRole.includes(userInfo.role)) return null;
 
   return userInfo;
 };
 
-const VALID_ROLES = ['teacher', 'diretor', 'admin'];
+const requireRole = async (req: any, res: any, allowedRoles: AppRole[]): Promise<UserInfo | null> => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) {
+    res.status(401).json({ error: 'Não autorizado' });
+    return null;
+  }
+  if (!allowedRoles.includes(userInfo.role)) {
+    res.status(403).json({ error: 'Acesso negado' });
+    return null;
+  }
+  return userInfo;
+};
 
 app.patch('/api/users/:uid/role', async (req, res) => {
-  // Server-side permission validation
   const userInfo = await validateUserPermission(req);
   if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  if (req.params.uid === userInfo.uid) return res.status(400).json({ error: 'Não é possível alterar seu próprio perfil' });
 
   const { role } = req.body;
   if (!VALID_ROLES.includes(role)) {
     return res.status(400).json({ error: 'Perfil inválido' });
   }
 
-  // Validar se tem permissão para promover
-  if (userInfo.role === 'teacher') {
-    return res.status(403).json({ error: 'Professores não podem mudar roles' });
-  }
-
+  const target = await getUserFromDB(req.params.uid);
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
   if (userInfo.role === 'diretor') {
-    // Diretor só pode promover para teacher ou diretor (não admin)
-    if (role === 'admin') {
-      return res.status(403).json({ error: 'Diretores não podem criar admins' });
+    if (target.school_id !== userInfo.school_id || ['admin', 'dev'].includes(target.role) || ['admin', 'dev'].includes(role)) {
+      return res.status(403).json({ error: 'Diretores só podem gerenciar perfis da própria escola' });
     }
+  } else if (userInfo.role !== 'admin' && userInfo.role !== 'dev') {
+    return res.status(403).json({ error: 'Professores não podem mudar perfis' });
   }
 
   const { data, error } = await supabase
@@ -567,65 +650,138 @@ app.patch('/api/users/:uid/role', async (req, res) => {
   res.json(transformKeys(data));
 });
 
-app.get('/api/labs/bookings', async (_req, res) => {
-  const { data, error } = await supabase.from('lab_bookings').select('*').order('date', { ascending: false }).order('starttime', { ascending: true });
+app.get('/api/labs/bookings', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  let query = supabase.from('lab_bookings').select('*');
+  if (userInfo.role === 'teacher') query = query.eq('teacherid', userInfo.uid);
+  if (userInfo.role === 'diretor') {
+    const { data: schoolTeachers, error: teacherError } = await supabase.from('users').select('uid').eq('role', 'teacher').eq('school_id', userInfo.school_id);
+    if (teacherError) return res.status(500).json({ error: 'Erro ao buscar professores da escola' });
+    query = query.in('teacherid', (schoolTeachers || []).map(teacher => teacher.uid));
+  }
+  const { data, error } = await query.order('date', { ascending: false }).order('starttime', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar reservas' });
   res.json(transformKeys(data));
 });
 
 app.post('/api/labs/bookings', async (req, res) => {
-  const { error } = await supabase.from('lab_bookings').insert(req.body);
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  const booking = req.body;
+  if (userInfo.role === 'teacher' && booking.teacherId !== userInfo.uid && booking.teacherid !== userInfo.uid) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'diretor') {
+    const teacherId = booking.teacherId || booking.teacherid;
+    const teacher = teacherId ? await getUserFromDB(teacherId) : null;
+    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+      return res.status(403).json({ error: 'A reserva deve pertencer a um professor da sua escola' });
+    }
+  }
+  const { error } = await supabase.from('lab_bookings').insert(booking);
   if (error) return res.status(500).json({ error: 'Erro ao criar reserva' });
   res.json({ status: 'success' });
 });
 
 app.delete('/api/labs/bookings/:id', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  if (userInfo.role === 'teacher') {
+    const { data: booking, error: findError } = await supabase.from('lab_bookings').select('teacherid').eq('id', req.params.id).maybeSingle();
+    if (findError) return res.status(500).json({ error: 'Erro ao verificar reserva' });
+    if (!booking || booking.teacherid !== userInfo.uid) return res.status(403).json({ error: 'Acesso negado' });
+  } else if (userInfo.role === 'diretor') {
+    const { data: booking, error: findError } = await supabase.from('lab_bookings').select('teacherid').eq('id', req.params.id).maybeSingle();
+    if (findError) return res.status(500).json({ error: 'Erro ao verificar reserva' });
+    const teacher = booking?.teacherid ? await getUserFromDB(booking.teacherid) : null;
+    if (!teacher || teacher.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
+  }
   const { error } = await supabase.from('lab_bookings').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao excluir reserva' });
   res.json({ status: 'success' });
 });
 
-app.delete('/api/labs/bookings-clear-all', async (_req, res) => {
+app.delete('/api/labs/bookings-clear-all', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
   const { error } = await supabase.from('lab_bookings').delete().not('id', 'is', null);
   if (error) return res.status(500).json({ error: 'Erro ao limpar reservas' });
   res.json({ status: 'success' });
 });
 
-app.get('/api/certificates', async (_req, res) => {
-  const { data, error } = await supabase.from('certificates').select('*').order('createdat', { ascending: false });
+app.get('/api/certificates', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  let query = supabase.from('certificates').select('*');
+  if (userInfo.role === 'teacher') query = query.eq('teacherid', userInfo.uid);
+  if (userInfo.role === 'diretor') {
+    const { data: schoolTeachers, error: teacherError } = await supabase.from('users').select('uid').eq('role', 'teacher').eq('school_id', userInfo.school_id);
+    if (teacherError) return res.status(500).json({ error: 'Erro ao buscar professores da escola' });
+    query = query.in('teacherid', (schoolTeachers || []).map(teacher => teacher.uid));
+  }
+  const { data, error } = await query.order('createdat', { ascending: false });
   if (error) return res.status(500).json({ error: 'Erro ao buscar certificados' });
   res.json(transformKeys(data));
 });
 
 app.get('/api/certificates/:id/image', async (req, res) => {
-  const { data, error } = await supabase.from('certificates').select('imageUrl').eq('id', req.params.id).maybeSingle();
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  const { data, error } = await supabase.from('certificates').select('teacherid,imageUrl').eq('id', req.params.id).maybeSingle();
   if (error) return res.status(500).json({ error: 'Erro ao buscar imagem' });
-  if (!data?.imageUrl) return res.status(404).json({ error: 'Imagem não encontrada' });
+  if (!data) return res.status(404).json({ error: 'Atestado não encontrado' });
+  if (userInfo.role === 'teacher' || userInfo.role === 'diretor') {
+    if (userInfo.role === 'teacher' && data.teacherid !== userInfo.uid) return res.status(403).json({ error: 'Acesso negado' });
+    if (userInfo.role === 'diretor') {
+      const teacher = data.teacherid ? await getUserFromDB(data.teacherid) : null;
+      if (!teacher || teacher.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
+    }
+  }
+  if (!data.imageUrl) return res.status(404).json({ error: 'Imagem não encontrada' });
   res.json({ imageUrl: data.imageUrl });
 });
 
 app.post('/api/certificates', async (req, res) => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  const certificate = req.body;
+  const teacherId = certificate.teacherId || certificate.teacherid;
+  if (userInfo.role === 'teacher' && teacherId !== userInfo.uid) return res.status(403).json({ error: 'Acesso negado' });
+  if (userInfo.role === 'diretor') {
+    const teacher = teacherId ? await getUserFromDB(teacherId) : null;
+    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+      return res.status(403).json({ error: 'O atestado deve pertencer a um professor da sua escola' });
+    }
+  }
   const { error } = await supabase.from('certificates').insert(req.body);
   if (error) return res.status(500).json({ error: 'Erro ao criar certificado' });
   res.json({ status: 'success' });
 });
 
 app.patch('/api/certificates/:id/approve', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  if (!userInfo) return;
   const { data: certificate, error: findError } = await supabase.from('certificates').select('teacherid,date').eq('id', req.params.id).maybeSingle();
   if (findError) return res.status(500).json({ error: 'Erro ao buscar certificado' });
   if (!certificate) return res.status(404).json({ error: 'Certificado não encontrado' });
+  if (userInfo.role === 'diretor') {
+    const teacher = await getUserFromDB(certificate.teacherid);
+    if (!teacher || teacher.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
+  }
 
   // Aprovar atestado
   const { error: certError } = await supabase.from('certificates').update({ status: 'approved' }).eq('id', req.params.id);
   if (certError) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
 
   // Buscar aula do professor no dia do atestado
-  const { data: teacherSchedule, error: schedFindError } = await supabase
+  let teacherScheduleQuery = supabase
     .from('schedules')
     .select('*')
     .eq('teacherid', certificate.teacherid)
-    .eq('date', certificate.date)
-    .single();
+    .eq('date', certificate.date);
+  if (userInfo.role === 'diretor') teacherScheduleQuery = teacherScheduleQuery.eq('school_id', userInfo.school_id);
+  const { data: teacherSchedule, error: schedFindError } = await teacherScheduleQuery.single();
 
   if (schedFindError && schedFindError.code !== 'PGRST116') {
     return res.status(500).json({ error: 'Erro ao buscar aula do professor' });
@@ -633,13 +789,14 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
 
   if (teacherSchedule) {
     // Buscar último horário do dia (maior startTime)
-    const { data: lastSchedule, error: lastError } = await supabase
+    let lastScheduleQuery = supabase
       .from('schedules')
       .select('*')
       .eq('date', certificate.date)
       .order('starttime', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+    if (userInfo.role === 'diretor') lastScheduleQuery = lastScheduleQuery.eq('school_id', userInfo.school_id);
+    const { data: lastSchedule, error: lastError } = await lastScheduleQuery.single();
 
     if (!lastError && lastSchedule && lastSchedule.id !== teacherSchedule.id) {
       // Fazer swap: trocar aulas de lugar
@@ -672,13 +829,17 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
 
 // ========== SCHOOLS (Multi-tenant) ==========
 
-app.get('/api/schools', async (_req, res) => {
+app.get('/api/schools', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
   const { data, error } = await supabase.from('schools').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar escolas' });
   res.json(data);
 });
 
 app.post('/api/schools', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
   const { name, createdBy } = req.body;
   if (!name) return res.status(400).json({ error: 'Nome da escola é obrigatório' });
   const { data, error } = await supabase.from('schools').insert({ name, createdBy }).select('*').single();
@@ -687,6 +848,8 @@ app.post('/api/schools', async (req, res) => {
 });
 
 app.patch('/api/schools/:id', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
   const { data, error } = await supabase.from('schools').update({ name }).eq('id', req.params.id).select('*').single();
@@ -695,6 +858,8 @@ app.patch('/api/schools/:id', async (req, res) => {
 });
 
 app.delete('/api/schools/:id', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
   const { error } = await supabase.from('schools').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao deletar escola' });
   res.json({ status: 'success' });
@@ -704,6 +869,18 @@ app.delete('/api/schools/:id', async (req, res) => {
 app.get('/api/teachers/:uid/subjects', async (req, res) => {
   const userInfo = await validateUserPermission(req);
   if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'diretor') {
+    const teacher = await getUserFromDB(req.params.uid);
+    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
+  }
+  if (!['teacher', 'diretor', 'admin', 'dev'].includes(userInfo.role)) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
 
   const { data, error } = await supabase
     .from('teacher_subjects')
@@ -719,9 +896,14 @@ app.post('/api/teachers/:uid/subjects', async (req, res) => {
   const userInfo = await validateUserPermission(req);
   if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
 
-  // Teacher só pode adicionar suas próprias matérias
   if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
     return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'diretor') {
+    const teacher = await getUserFromDB(req.params.uid);
+    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
   }
 
   let { subject } = req.body;
@@ -750,9 +932,14 @@ app.delete('/api/teachers/:uid/subjects/:subject', async (req, res) => {
   const userInfo = await validateUserPermission(req);
   if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
 
-  // Teacher só pode deletar suas próprias matérias
   if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
     return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'diretor') {
+    const teacher = await getUserFromDB(req.params.uid);
+    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
+      return res.status(403).json({ error: 'Acesso negado' });
+    }
   }
 
   const { error } = await supabase

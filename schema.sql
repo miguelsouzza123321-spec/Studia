@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   uid UUID PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
   displayName TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'teacher' CHECK (role IN ('teacher', 'diretor', 'admin')),
+  role TEXT NOT NULL DEFAULT 'teacher' CHECK (role IN ('teacher', 'diretor', 'admin', 'dev')),
   subject TEXT
 );
 
