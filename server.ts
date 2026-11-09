@@ -65,6 +65,24 @@ const sanitizeEmail = (email: string): string => {
   return email.trim().toLowerCase();
 };
 
+const normalizeSubjects = (subject: unknown): string[] => {
+  const entries = Array.isArray(subject) ? subject : [subject];
+  const subjects = entries
+    .filter((entry): entry is string => typeof entry === 'string')
+    .flatMap(entry => entry.split(/[,;\n]/))
+    .map(entry => sanitizeString(entry))
+    .filter(Boolean);
+  return [...new Map(subjects.map(entry => [entry.toLocaleLowerCase(), entry])).values()];
+};
+
+const saveTeacherSubjects = async (teacherId: string, subjects: string[]) => {
+  if (subjects.length === 0) return null;
+  const { error } = await supabase
+    .from('teacher_subjects')
+    .insert(subjects.map(subject => ({ teacher_id: teacherId, subject })));
+  return error;
+};
+
 // Security: Rate-limiting em-memória
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
@@ -101,7 +119,8 @@ app.post('/api/auth/register', async (req, res) => {
     // Sanitizar entrada
     email = sanitizeEmail(email);
     displayName = sanitizeString(displayName);
-    subject = sanitizeString(subject);
+    const subjects = normalizeSubjects(subject);
+    subject = subjects.join(', ');
 
     // Rate-limit: máx 3 registros por minuto por IP
     const ip = req.ip || 'unknown';
@@ -174,6 +193,12 @@ app.post('/api/auth/register', async (req, res) => {
     if (updateError) {
       console.error('[REGISTER] Update error:', updateError);
       return res.status(500).json({ error: `Erro ao atualizar escola: ${updateError.message}` });
+    }
+
+    const subjectError = await saveTeacherSubjects(uid, subjects);
+    if (subjectError) {
+      console.error('[REGISTER] Could not save teacher subjects:', subjectError);
+      return res.status(500).json({ error: `Erro ao salvar matérias: ${subjectError.message}` });
     }
 
     const { data: sessionData, error: sessionError } = await supabaseAuth.auth.signInWithPassword({ email, password });
@@ -282,7 +307,8 @@ app.post('/api/users/create', async (req, res) => {
   // Sanitizar entrada
   email = sanitizeEmail(email);
   displayName = sanitizeString(displayName);
-  subject = sanitizeString(subject);
+  const subjects = normalizeSubjects(subject);
+  subject = subjects.join(', ');
   role = sanitizeString(role);
 
   // Rate-limit: máx 10 criações por minuto por IP
@@ -374,6 +400,14 @@ app.post('/api/users/create', async (req, res) => {
     if (updateError) {
       console.error('[CREATE_USER] Update school_id failed:', updateError);
       // Não falha - continua sem school_id
+    }
+
+    if (role === 'teacher') {
+      const subjectError = await saveTeacherSubjects(uid, subjects);
+      if (subjectError) {
+        console.error('[CREATE_USER] Could not save teacher subjects:', subjectError);
+        return res.status(500).json({ error: `Usuário criado, mas não foi possível salvar as matérias: ${subjectError.message}` });
+      }
     }
 
     res.json(transformKeys(userData || { uid, email, displayname: displayName, role, school_id: finalSchoolId }));

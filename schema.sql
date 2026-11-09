@@ -9,6 +9,16 @@ CREATE TABLE IF NOT EXISTS users (
   subject TEXT
 );
 
+-- A teacher can teach more than one subject.
+CREATE TABLE IF NOT EXISTS teacher_subjects (
+  id BIGSERIAL PRIMARY KEY,
+  teacher_id UUID NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
+  subject TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_teacher_subjects_teacher_subject
+  ON teacher_subjects (teacher_id, subject);
+
 -- Schedules table (aulas/horários)
 CREATE TABLE IF NOT EXISTS schedules (
   id BIGSERIAL PRIMARY KEY,

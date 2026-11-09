@@ -748,7 +748,7 @@ const LandingView = () => `
         <div class="space-y-4">
           ${authMode === 'register' ? `
             <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
-            <input type="text" id="auth-subject" placeholder="Sua Matéria (ex: Português)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
+            <input type="text" id="auth-subject" placeholder="Matérias (separe por vírgula)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
           ` : ''}
           <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
           <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
@@ -1220,8 +1220,8 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
           <input type="password" id="user-password" placeholder="Mínimo 8 caracteres" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required minlength="8">
         </div>
         <div>
-          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Matéria</label>
-          <input type="text" id="user-subject" placeholder="Ex: Matemática" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900">
+          <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Matérias</label>
+          <input type="text" id="user-subject" placeholder="Ex: Matemática, Física, Química" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900">
         </div>
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Cargo</label>
