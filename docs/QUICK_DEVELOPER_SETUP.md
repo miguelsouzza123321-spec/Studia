@@ -23,6 +23,8 @@ Substitua o email pelo da conta cadastrada. Faça logout e login novamente. A co
 
 Antes de publicar esta versão, execute `migrations/006_remove_admin_role.sql` no SQL Editor do Supabase. Ela converte as contas antigas de administrador em desenvolvedor e remove o cargo antigo da restrição do banco. Depois, as pessoas afetadas devem sair da conta e entrar novamente para atualizar o cargo salvo na sessão.
 
+Para habilitar as abas de logs e auditoria, execute também `migrations/007_developer_console_logs.sql` antes do deploy.
+
 ---
 
 ## 🧪 Próximos Passos

@@ -9,7 +9,7 @@ Sistema de gestão escolar para controle de horários de aula, reservas de labor
 - **Atestados médicos**: professores enviam atestado (data, motivo, foto opcional); a direção aprova e o sistema marca automaticamente as aulas do dia como "aula vaga".
 - **Usuários**: cadastro de contas (professor/direção pedagógica/desenvolvedor), gestão de perfis e exclusão de usuários.
 - **Relatórios**: grade de horários em PDF por professor ou por turma, com filtros de semana, turno e tamanho de card, além de um gráfico simples de frequência.
-- **Área do desenvolvedor**: reúne a gestão global de escolas, usuários, horários, laboratórios e atestados em todas as escolas. Diretores e professores têm acesso limitado à própria escola ou aos próprios dados.
+- **Área do desenvolvedor**: reúne a gestão global de escolas e usuários, monitoramento, diagnóstico, logs, auditoria e ferramentas de exportação. Diretores e professores têm acesso limitado à própria escola ou aos próprios dados.
 
 ## Stack
 

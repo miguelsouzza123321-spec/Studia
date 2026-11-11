@@ -151,6 +151,47 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: '10mb' }));
 
+app.use('/api', (req, res, next) => {
+  res.once('finish', () => {
+    const route = `${req.baseUrl}${req.route?.path || req.path}`.slice(0, 255);
+    const method = req.method;
+
+    if (res.statusCode >= 500) {
+      void supabase.from('dev_error_logs').insert({
+        method,
+        route,
+        status_code: res.statusCode
+      }).then(({ error }) => {
+        if (error) console.error('[DEV_LOG] Could not store API error:', error);
+      }, error => console.error('[DEV_LOG] Could not store API error:', error));
+    }
+
+    const isDataExport = method === 'GET' && req.path.startsWith('/api/dev/export/');
+    if ((!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !isDataExport) || res.statusCode < 200 || res.statusCode >= 300) return;
+    const authorization = req.headers.authorization as string | undefined;
+    const accessToken = authorization?.startsWith('Bearer ') ? authorization.slice(7) : '';
+    if (!accessToken) return;
+
+    void (async () => {
+      const { data: authData, error: authError } = await supabaseAuth.auth.getUser(accessToken);
+      if (authError || !authData.user) return;
+
+      const actor = await getUserFromDB(authData.user.id);
+      if (!actor) return;
+
+      const { error } = await supabase.from('dev_audit_logs').insert({
+        actor_uid: actor.uid,
+        actor_role: actor.role,
+        method,
+        route,
+        status_code: res.statusCode
+      });
+      if (error) console.error('[DEV_AUDIT] Could not store API activity:', error);
+    })().catch(error => console.error('[DEV_AUDIT] Could not store API activity:', error));
+  });
+  next();
+});
+
 app.post('/api/auth/register', async (req, res) => {
   try {
     let { email, password, displayName, subject, school_id } = req.body;
@@ -740,6 +781,105 @@ const requireRole = async (req: any, res: any, allowedRoles: AppRole[]): Promise
   }
   return userInfo;
 };
+
+app.get('/api/dev/diagnostics', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['dev']);
+  if (!userInfo) return;
+
+  const tables = ['users', 'schools', 'schedules', 'lab_bookings', 'certificates', 'school_subjects', 'teacher_subjects'] as const;
+  const probes = await Promise.all(tables.map(async table => {
+    const startedAt = Date.now();
+    const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
+    return {
+      table,
+      ok: !error,
+      records: error ? null : count,
+      latencyMs: Date.now() - startedAt
+    };
+  }));
+
+  const integrityChecks = await Promise.all([
+    supabase.from('users').select('uid', { count: 'exact', head: true }).eq('role', 'teacher').is('school_id', null),
+    supabase.from('schedules').select('id', { count: 'exact', head: true }).is('school_id', null)
+  ]);
+  const dbProbe = probes.find(probe => probe.table === 'users');
+
+  res.json({
+    checkedAt: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+    api: { ok: true },
+    database: { ok: dbProbe?.ok || false, latencyMs: dbProbe?.latencyMs ?? null },
+    probes,
+    integrity: [
+      { name: 'Professores sem escola', count: integrityChecks[0].error ? null : integrityChecks[0].count, ok: !integrityChecks[0].error },
+      { name: 'Horários sem escola', count: integrityChecks[1].error ? null : integrityChecks[1].count, ok: !integrityChecks[1].error }
+    ]
+  });
+});
+
+app.get('/api/dev/logs', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['dev']);
+  if (!userInfo) return;
+
+  const { data, error } = await supabase
+    .from('dev_error_logs')
+    .select('id,created_at,method,route,status_code')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) return res.status(500).json({ error: 'Não foi possível carregar os logs do sistema.' });
+  res.json(data || []);
+});
+
+app.get('/api/dev/audit', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['dev']);
+  if (!userInfo) return;
+
+  const { data, error } = await supabase
+    .from('dev_audit_logs')
+    .select('id,created_at,actor_uid,actor_role,method,route,status_code')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) return res.status(500).json({ error: 'Não foi possível carregar a auditoria.' });
+  res.json(data || []);
+});
+
+app.get('/api/dev/export/:resource', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['dev']);
+  if (!userInfo) return;
+
+  const exportFields = {
+    users: 'uid,email,displayname,role,school_id,subject',
+    schools: 'id,name,createdat',
+    schedules: 'id,date,starttime,endtime,subject,room,teacherid,teachername,classgroup,status,school_id',
+    lab_bookings: 'id,labid,teacherid,teachername,date,starttime,endtime',
+    certificates: 'id,teacherid,teachername,date,reason,status,createdat',
+    school_subjects: 'id,school_id,subject',
+    teacher_subjects: 'id,teacher_id,subject_id'
+  } as const;
+  const resource = req.params.resource as keyof typeof exportFields;
+  if (!Object.prototype.hasOwnProperty.call(exportFields, resource)) {
+    return res.status(400).json({ error: 'Tipo de exportação inválido.' });
+  }
+  const fields = exportFields[resource];
+  const { count, error: countError } = await supabase
+    .from(resource)
+    .select(fields, { count: 'exact', head: true });
+  if (countError) return res.status(500).json({ error: 'Não foi possível exportar esta tabela.' });
+  if ((count || 0) > 5000) {
+    return res.status(413).json({ error: 'A tabela excede o limite de 5.000 registros por exportação.' });
+  }
+
+  const rows = [];
+  for (let offset = 0; offset < (count || 0); offset += 1000) {
+    const { data, error } = await supabase
+      .from(resource)
+      .select(fields)
+      .range(offset, Math.min(offset + 999, (count || 0) - 1));
+    if (error) return res.status(500).json({ error: 'Não foi possível exportar esta tabela.' });
+    rows.push(...(data || []));
+  }
+  res.json({ resource, count: rows.length, rows: transformKeys(rows) });
+});
 
 app.patch('/api/users/:uid/role', async (req, res) => {
   const userInfo = await validateUserPermission(req);

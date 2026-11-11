@@ -19,8 +19,15 @@ O desenvolvedor pode gerenciar **múltiplas escolas** simultaneamente. As antiga
 5. Click **"Entrar"**
 
 Você vê o console do desenvolvedor com:
-- Aba **"Visão Geral"** (ativa por padrão)
-- Abas de dados: Horários, Laboratórios, Atestados, Usuários, Relatórios
+- **Visão geral** — indicadores gerais da plataforma
+- **Saúde do sistema** — disponibilidade da API e do banco
+- **Diagnóstico** — latência, contagens e verificações básicas de integridade
+- **Logs de erros** — últimos erros HTTP 5xx, sem conteúdo de requisições
+- **Auditoria** — alterações concluídas e exportações feitas por usuários autenticados
+- **Dados e backups** — contagens, exportação CSV por tabela e orientação para backups
+- **Escolas e Usuários** — administração global da plataforma
+
+Logs e auditoria dependem da migração `007_developer_console_logs.sql`. Exportações CSV exigem confirmação e podem conter informações pessoais; cada tabela tem limite de 5.000 registros por exportação. Os backups completos são gerenciados pelo Supabase.
 
 ## Aba: Visão Geral
 

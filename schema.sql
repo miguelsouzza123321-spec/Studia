@@ -1,5 +1,5 @@
 -- Studia Schema
--- This is the base schema. Apply migrations/001 through migrations/006 in order
+-- This is the base schema. Apply migrations/001 through migrations/007 in order
 -- to reach the current multi-school schema and subject catalog model.
 
 -- Users table

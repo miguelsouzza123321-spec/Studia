@@ -101,6 +101,7 @@ Pronto! https://studia.sua-escola.com rodando.
 - [ ] Login funciona
 - [ ] Desenvolvedor consegue criar escola
 - [ ] Executar `migrations/006_remove_admin_role.sql` no Supabase antes de publicar a versão com os cargos atualizados
+- [ ] Executar `migrations/007_developer_console_logs.sql` no Supabase antes de publicar as ferramentas de logs e auditoria
 - [ ] Diretor consegue criar professor
 - [ ] Professor consegue criar aula
 - [ ] Dados estão sendo salvos no banco

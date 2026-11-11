@@ -78,6 +78,10 @@ let editingTeacherSubjectsId = null;
 let schools = [];
 let schoolSubjects = [];
 let subjectSchoolId = '';
+let devDiagnostics = null;
+let devAuditLogs = [];
+let devErrorLogs = [];
+let devPanelErrors = {};
 let stats = { total: 0, confirmed: 0, absent: 0, pending: 0 };
 let currentTab = 'horarios';
 let authMode = 'closed'; // 'login', 'register' or 'closed'
@@ -309,6 +313,35 @@ const getDayOfWeek = (dateObj) => {
   return day === 0 ? 7 : day;
 };
 
+const REPORT_SUBJECT_ABBREVIATIONS = new Map([
+  ['programacao front-end', 'Prog. Front-End'],
+  ['programacao back-end', 'Prog. Back-End'],
+  ['programacao back-end i', 'Prog. Back-End I'],
+  ['programacao back-end ii', 'Prog. Back-End II'],
+  ['programacao mobile', 'Prog. Mobile'],
+  ['programacao de desenvolvimento de sistemas', 'Prog. de Desenv. de Sistemas'],
+  ['analise e projeto de sistemas', 'Análise e Proj. de Sistemas'],
+  ['educacao fisica', 'Ed. Física'],
+  ['educacao financeira', 'Ed. Financeira'],
+  ['lingua portuguesa', 'Língua Port.'],
+]);
+
+const abbreviateReportSubject = subject => {
+  const value = String(subject || '').trim();
+  if (!value) return value;
+  const normalized = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').replace(/\s+/g, ' ');
+  return REPORT_SUBJECT_ABBREVIATIONS.get(normalized) || value
+    .replace(/\bprogramação\b/gi, 'Prog.')
+    .replace(/\bdesenvolvimento\b/gi, 'Desenv.')
+    .replace(/\beducação\b/gi, 'Ed.')
+    .replace(/\bportuguesa\b/gi, 'Port.')
+    .replace(/\bprojeto\b/gi, 'Proj.');
+};
+
+const abbreviateReportEntry = entry => entry.split(' - ').map((part, index) => (
+  index === 0 && entry.includes(' - ') ? part : abbreviateReportSubject(part)
+)).join(' - ');
+
 // Helper function to determine if a start time belongs to a specific turno
 const isSlotsMatchTurno = (startTime, turno) => {
   if (turno === 'matutino') {
@@ -413,7 +446,7 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
     <div class="bg-white border border-slate-300 rounded-lg text-slate-800 shadow-sm flex flex-col justify-between break-inside-avoid text-xs w-full" style="${cardStyle}">
       <div class="border-b border-slate-300 pb-1 mb-1.5 flex flex-wrap justify-between items-center gap-x-2 bg-slate-100 px-2 py-1 rounded">
         <span class="font-extrabold uppercase text-slate-900 whitespace-normal break-words ${headerSize}">${teacher.displayName}${anosSuffix}</span>
-        <span class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight whitespace-normal break-words">${teacher.subject || 'Professor'}</span>
+        <span title="${teacher.subject || 'Professor'}" class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight whitespace-normal break-words">${abbreviateReportSubject(teacher.subject || 'Professor')}</span>
       </div>
       <table class="w-full text-center border-collapse table-fixed">
         <thead>
@@ -432,7 +465,7 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
                 const isHAF = val === 'HAF';
                 const isVaga = val === 'VAGA';
                 const cellClass = isVaga ? 'text-rose-600 font-black' : (isHAF ? 'text-[#5B99C2] font-black' : (isClass ? 'text-slate-900 font-black' : 'text-slate-400'));
-                return `<td class="${tdSize} py-0.5 whitespace-normal break-words ${cellClass}">${val}</td>`;
+                return `<td title="${val}" class="${tdSize} py-0.5 whitespace-normal break-words ${cellClass}">${val.split('/').map(abbreviateReportEntry).join('/')}</td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -557,7 +590,7 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
                 return `
                   <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
                     <div class="font-black text-slate-900 whitespace-normal break-words ${tdTitleSize}">${cell.teacherName}</div>
-                    <div class="text-slate-400 font-extrabold whitespace-normal break-words uppercase mt-0.5 ${tdSubSize}">${cell.subject}</div>
+                    <div title="${cell.subject}" class="text-slate-400 font-extrabold whitespace-normal break-words uppercase mt-0.5 ${tdSubSize}">${abbreviateReportSubject(cell.subject)}</div>
                   </td>
                 `;
               }).join('')}
@@ -1291,7 +1324,7 @@ const CreateUserModal = ({ viewerRole = 'dev' } = {}) => `
 `;
 
 const DeveloperOverviewTab = () => {
-  const connected = !!apiBaseUrl;
+  const connected = !!devDiagnostics?.api.ok && !!devDiagnostics?.database.ok;
   const totalSchedules = schedules.length;
   const totalUsers = allUsers.length;
   const totalLabs = labBookings.length;
@@ -1394,6 +1427,203 @@ const DeveloperOverviewTab = () => {
   `;
 };
 
+const escapeDeveloperHtml = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+}[char]));
+
+const developerRefreshButton = () => `
+  <button onclick="actions.refreshDeveloperPanel()" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white hover:bg-slate-800">
+    <i data-lucide="refresh-cw" class="h-4 w-4"></i> Atualizar
+  </button>
+`;
+
+const developerErrorNotice = key => devPanelErrors[key] ? `
+  <div class="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-700">${escapeDeveloperHtml(devPanelErrors[key])}</div>
+` : '';
+
+const DeveloperHealthTab = () => {
+  const diagnostics = devDiagnostics;
+  const apiOk = diagnostics?.api.ok;
+  const databaseOk = diagnostics?.database.ok;
+  return `
+    <div class="space-y-6">
+      <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 class="text-2xl font-black text-slate-900">Saúde do sistema</h3>
+          <p class="mt-1 text-sm font-medium text-slate-500">Estado atual da API e conexão com o banco de dados.</p>
+        </div>
+        ${developerRefreshButton()}
+      </header>
+      ${developerErrorNotice('diagnostics')}
+      <div class="grid gap-4 md:grid-cols-3">
+        ${[
+          { title: 'API', ok: apiOk, detail: apiOk === undefined ? 'Aguardando verificação' : apiOk ? 'Respondendo normalmente' : 'Indisponível' },
+          { title: 'Banco de dados', ok: databaseOk, detail: databaseOk === undefined ? 'Aguardando verificação' : databaseOk ? `${diagnostics.database.latencyMs} ms de resposta` : 'Falha ao consultar o banco' },
+          { title: 'Tempo ativo', ok: apiOk, detail: diagnostics ? `${Math.floor(diagnostics.uptimeSeconds / 60)} min` : 'Aguardando verificação' }
+        ].map(item => `
+          <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex items-center justify-between">
+              <h4 class="font-black text-slate-800">${item.title}</h4>
+              <span class="rounded-full px-3 py-1 text-xs font-black ${item.ok === undefined ? 'bg-slate-100 text-slate-500' : item.ok ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${item.ok === undefined ? 'PENDENTE' : item.ok ? 'OK' : 'FALHA'}</span>
+            </div>
+            <p class="mt-4 text-sm font-semibold text-slate-500">${item.detail}</p>
+          </article>
+        `).join('')}
+      </div>
+      ${diagnostics ? `<p class="text-xs font-medium text-slate-400">Verificado em ${new Date(diagnostics.checkedAt).toLocaleString('pt-BR')}.</p>` : ''}
+    </div>
+  `;
+};
+
+const DeveloperDiagnosticsTab = () => `
+  <div class="space-y-6">
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900">Diagnóstico</h3>
+        <p class="mt-1 text-sm font-medium text-slate-500">Testes de leitura nas tabelas e verificações básicas de integridade.</p>
+      </div>
+      ${developerRefreshButton()}
+    </header>
+    ${developerErrorNotice('diagnostics')}
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <h4 class="border-b border-slate-100 p-5 font-black text-slate-800">Conexão e latência por tabela</h4>
+      ${devDiagnostics ? `
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[560px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-5 py-3">Tabela</th><th class="px-5 py-3">Status</th><th class="px-5 py-3">Registros</th><th class="px-5 py-3">Resposta</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              ${devDiagnostics.probes.map(probe => `
+                <tr>
+                  <td class="px-5 py-3 font-semibold text-slate-700">${escapeDeveloperHtml(probe.table)}</td>
+                  <td class="px-5 py-3 font-bold ${probe.ok ? 'text-emerald-700' : 'text-rose-700'}">${probe.ok ? 'OK' : 'Falha'}</td>
+                  <td class="px-5 py-3 text-slate-600">${probe.records ?? '—'}</td>
+                  <td class="px-5 py-3 text-slate-600">${probe.latencyMs} ms</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : '<p class="p-5 text-sm font-medium text-slate-500">Atualize para executar os testes.</p>'}
+    </section>
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h4 class="font-black text-slate-800">Integridade básica</h4>
+      <div class="mt-4 grid gap-3 md:grid-cols-2">
+        ${(devDiagnostics?.integrity || []).map(check => `
+          <div class="flex items-center justify-between gap-4 rounded-xl bg-slate-50 p-4">
+            <span class="text-sm font-semibold text-slate-600">${escapeDeveloperHtml(check.name)}</span>
+            <span class="text-sm font-black ${check.ok && check.count === 0 ? 'text-emerald-700' : 'text-amber-700'}">${check.ok ? check.count : 'Erro na consulta'}</span>
+          </div>
+        `).join('')}
+        ${!devDiagnostics ? '<p class="text-sm text-slate-500">Os resultados aparecerão após a verificação.</p>' : ''}
+      </div>
+    </section>
+  </div>
+`;
+
+const DeveloperLogsTab = () => `
+  <div class="space-y-6">
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900">Logs de erros</h3>
+        <p class="mt-1 text-sm font-medium text-slate-500">Últimos 100 erros HTTP 5xx registrados pela API. O conteúdo dos pedidos não é armazenado.</p>
+      </div>
+      ${developerRefreshButton()}
+    </header>
+    ${developerErrorNotice('logs')}
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      ${devErrorLogs.length ? `
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[620px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-5 py-3">Data</th><th class="px-5 py-3">Método</th><th class="px-5 py-3">Rota</th><th class="px-5 py-3">Código</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              ${devErrorLogs.map(log => `
+                <tr><td class="px-5 py-3 text-slate-600">${new Date(log.created_at).toLocaleString('pt-BR')}</td><td class="px-5 py-3 font-bold text-slate-700">${escapeDeveloperHtml(log.method)}</td><td class="px-5 py-3 font-mono text-xs text-slate-600">${escapeDeveloperHtml(log.route)}</td><td class="px-5 py-3 font-black text-rose-700">${escapeDeveloperHtml(log.status_code)}</td></tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : '<p class="p-5 text-sm font-medium text-slate-500">Nenhum erro registrado ou ainda não há logs disponíveis.</p>'}
+    </section>
+  </div>
+`;
+
+const DeveloperAuditTab = () => `
+  <div class="space-y-6">
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900">Auditoria</h3>
+        <p class="mt-1 text-sm font-medium text-slate-500">Últimas 100 alterações concluídas, com usuário, rota e horário.</p>
+      </div>
+      ${developerRefreshButton()}
+    </header>
+    ${developerErrorNotice('audit')}
+    <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      ${devAuditLogs.length ? `
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[760px] text-left text-sm">
+            <thead class="bg-slate-50 text-xs uppercase text-slate-400"><tr><th class="px-5 py-3">Data</th><th class="px-5 py-3">Usuário</th><th class="px-5 py-3">Ação</th><th class="px-5 py-3">Rota</th><th class="px-5 py-3">Resultado</th></tr></thead>
+            <tbody class="divide-y divide-slate-100">
+              ${devAuditLogs.map(entry => `
+                <tr><td class="px-5 py-3 text-slate-600">${new Date(entry.created_at).toLocaleString('pt-BR')}</td><td class="px-5 py-3 font-mono text-xs text-slate-600">${escapeDeveloperHtml(entry.actor_uid)} <span class="font-sans">(${escapeDeveloperHtml(entry.actor_role)})</span></td><td class="px-5 py-3 font-bold text-slate-700">${escapeDeveloperHtml(entry.method)}</td><td class="px-5 py-3 font-mono text-xs text-slate-600">${escapeDeveloperHtml(entry.route)}</td><td class="px-5 py-3 font-semibold text-emerald-700">${escapeDeveloperHtml(entry.status_code)}</td></tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      ` : '<p class="p-5 text-sm font-medium text-slate-500">Nenhuma alteração registrada ou ainda não há eventos disponíveis.</p>'}
+    </section>
+  </div>
+`;
+
+const DeveloperDataTab = () => `
+  <div class="space-y-6">
+    <header class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900">Dados e backups</h3>
+        <p class="mt-1 text-sm font-medium text-slate-500">Consulte volumes e exporte dados selecionados da plataforma.</p>
+      </div>
+      ${developerRefreshButton()}
+    </header>
+    ${developerErrorNotice('diagnostics')}
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h4 class="font-black text-slate-800">Registros por tabela</h4>
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        ${(devDiagnostics?.probes || []).map(probe => `
+          <div class="rounded-xl bg-slate-50 p-4">
+            <p class="text-xs font-bold uppercase text-slate-400">${escapeDeveloperHtml(probe.table)}</p>
+            <p class="mt-2 text-2xl font-black text-slate-800">${probe.ok ? probe.records : 'Consulta falhou'}</p>
+          </div>
+        `).join('')}
+        ${!devDiagnostics ? '<p class="text-sm text-slate-500">Atualize para consultar as tabelas.</p>' : ''}
+      </div>
+    </section>
+    <section class="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+      <h4 class="font-black text-amber-900">Exportação CSV</h4>
+      <p class="mt-1 text-sm text-amber-800">Os arquivos podem conter dados pessoais. Escolha uma tabela e confirme antes de baixar; cada exportação tem limite de 5.000 registros.</p>
+      <div class="mt-4 flex flex-col gap-3 sm:flex-row">
+        <select id="dev-export-resource" class="rounded-xl border border-amber-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700">
+          <option value="users">Usuários</option>
+          <option value="schools">Escolas</option>
+          <option value="schedules">Horários</option>
+          <option value="lab_bookings">Reservas de laboratório</option>
+          <option value="certificates">Atestados (sem imagens)</option>
+          <option value="school_subjects">Matérias da escola</option>
+          <option value="teacher_subjects">Vínculos de matérias</option>
+        </select>
+        <button onclick="actions.exportDeveloperData()" class="rounded-xl bg-amber-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-800">Exportar CSV</button>
+      </div>
+    </section>
+    <section class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h4 class="font-black text-slate-800">Backup e restauração</h4>
+      <p class="mt-2 text-sm leading-6 text-slate-600">Backups completos devem ser criados e restaurados pelo painel do Supabase, que controla a retenção e os snapshots do projeto. Antes de uma alteração estrutural, confira o backup mais recente e teste a restauração em um ambiente separado.</p>
+      <a href="https://supabase.com/dashboard" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-2 font-bold text-blue-700 hover:text-blue-800">Abrir painel do Supabase <i data-lucide="external-link" class="h-4 w-4"></i></a>
+    </section>
+  </div>
+`;
+
 const DeveloperSidebarBtn = (id, icon, label) => `
   <button onclick="actions.switchTab('${id}')"
     class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all font-semibold ${currentTab === id ? 'bg-white/10 text-white font-bold' : 'text-slate-400 hover:bg-white/5 hover:text-white'}">
@@ -1484,15 +1714,22 @@ const MobileDrawer = ({ theme = 'light', sectionLabel, navItems, profile, drawer
 
 const DEVELOPER_NAV_ITEMS = [
   { id: 'overview', icon: 'activity', label: 'Visão geral' },
+  { id: 'dev_health', icon: 'activity', label: 'Saúde do sistema' },
+  { id: 'dev_diagnostics', icon: 'search', label: 'Diagnóstico' },
+  { id: 'dev_logs', icon: 'file-text', label: 'Logs de erros' },
+  { id: 'dev_audit', icon: 'clipboard', label: 'Auditoria' },
+  { id: 'dev_data', icon: 'database', label: 'Dados e backups' },
   { id: 'escolas', icon: 'building', label: 'Escolas' },
+  { id: 'usuarios', icon: 'users', label: 'Usuários' },
+];
+
+const DIRETOR_NAV_ITEMS = [
   { id: 'horarios', icon: 'calendar', label: 'Horários' },
   { id: 'labs', icon: 'test-tube', label: 'Laboratórios' },
   { id: 'atestados', icon: 'file-text', label: 'Atestados' },
   { id: 'usuarios', icon: 'users', label: 'Usuários' },
   { id: 'relatorios', icon: 'bar-chart', label: 'Relatórios' },
 ];
-
-const DIRETOR_NAV_ITEMS = DEVELOPER_NAV_ITEMS.filter(item => item.id !== 'overview' && item.id !== 'escolas');
 
 const DeveloperView = () => `
   <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
@@ -1511,28 +1748,19 @@ const DeveloperView = () => `
           </div>
         </div>
         <div class="flex items-center gap-2">
-          ${currentTab === 'horarios' ? `
-            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all">
-              <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo Horário</span>
-            </button>
-          ` : ''}
-          ${currentTab === 'labs' ? `
-            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all">
-              <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
-            </button>
-          ` : ''}
           <span class="hidden md:inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em]"><i data-lucide="code-2" class="w-3.5 h-3.5"></i> Desenvolvedor</span>
         </div>
       </header>
 
       <div class="p-4 md:p-10 flex-1 overflow-y-auto space-y-6 md:space-y-8 print:p-0">
         ${currentTab === 'overview' ? DeveloperOverviewTab() : ''}
+        ${currentTab === 'dev_health' ? DeveloperHealthTab() : ''}
+        ${currentTab === 'dev_diagnostics' ? DeveloperDiagnosticsTab() : ''}
+        ${currentTab === 'dev_logs' ? DeveloperLogsTab() : ''}
+        ${currentTab === 'dev_audit' ? DeveloperAuditTab() : ''}
+        ${currentTab === 'dev_data' ? DeveloperDataTab() : ''}
         ${currentTab === 'escolas' ? EscolasTab() : ''}
-        ${currentTab === 'horarios' ? HorariosTab() : ''}
-        ${currentTab === 'labs' ? LabsTab() : ''}
-        ${currentTab === 'atestados' ? AtestadosTab() : ''}
         ${currentTab === 'usuarios' ? UsersTab({ viewerRole: 'dev' }) : ''}
-        ${currentTab === 'relatorios' ? RelatoriosTab() : ''}
       </div>
     </main>
 
@@ -2480,8 +2708,7 @@ const slidesContent = [
 
 // --- ACTIONS ---
 const TAB_ACCESS = {
-  dev: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
-  dev: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
+  dev: ['overview', 'dev_health', 'dev_diagnostics', 'dev_logs', 'dev_audit', 'dev_data', 'escolas', 'usuarios'],
   diretor: ['horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   teacher: ['horarios', 'labs', 'materias', 'atestados'],
 };
@@ -2535,9 +2762,10 @@ const actions = {
         render(LandingView());
       } else {
         if (!TAB_ACCESS[user.role]?.includes(currentTab)) {
-          currentTab = 'horarios';
+          currentTab = TAB_ACCESS[user.role]?.[0] || 'horarios';
         }
         await this.refreshData();
+        if (user.role === 'dev') await this.loadDeveloperPanel(currentTab);
         this.renderCurrentView();
       }
       if (typeof lucide !== 'undefined') {
@@ -2719,6 +2947,81 @@ const actions = {
     this.init();
   },
 
+  async loadDeveloperPanel(tab = currentTab) {
+    try {
+      if (['overview', 'dev_health', 'dev_diagnostics', 'dev_data'].includes(tab)) {
+        devDiagnostics = await api.get('/api/dev/diagnostics');
+        delete devPanelErrors.diagnostics;
+      } else if (tab === 'dev_logs') {
+        devErrorLogs = await api.get('/api/dev/logs');
+        delete devPanelErrors.logs;
+      } else if (tab === 'dev_audit') {
+        devAuditLogs = await api.get('/api/dev/audit');
+        delete devPanelErrors.audit;
+      }
+    } catch (err) {
+      const errorKey = ['overview', 'dev_health', 'dev_diagnostics', 'dev_data'].includes(tab) ? 'diagnostics' : tab === 'dev_logs' ? 'logs' : 'audit';
+      devPanelErrors[errorKey] = err.message || 'Não foi possível carregar os dados desta aba.';
+    }
+  },
+
+  async refreshDeveloperPanel() {
+    if (user?.role !== 'dev') return;
+    await this.loadDeveloperPanel(currentTab);
+    this.renderCurrentView();
+  },
+
+  async exportDeveloperData() {
+    if (user?.role !== 'dev') return;
+    const resource = document.getElementById('dev-export-resource')?.value;
+    if (!resource) return showDialog('Selecione uma tabela para exportar.');
+
+    const confirmed = await showDialog(
+      'O CSV pode conter informações pessoais. Guarde o arquivo em local seguro e compartilhe apenas com pessoas autorizadas. Deseja continuar?',
+      { confirm: true, title: 'Confirmar exportação' }
+    );
+    if (!confirmed) return;
+
+    try {
+      const result = await api.get(`/api/dev/export/${encodeURIComponent(resource)}`);
+      const columnsByResource = {
+        users: ['uid', 'email', 'displayName', 'role', 'school_id', 'subject'],
+        schools: ['id', 'name', 'createdAt'],
+        schedules: ['id', 'date', 'startTime', 'endTime', 'subject', 'room', 'teacherId', 'teacherName', 'classGroup', 'status', 'school_id'],
+        lab_bookings: ['id', 'labId', 'teacherId', 'teacherName', 'date', 'startTime', 'endTime'],
+        certificates: ['id', 'teacherId', 'teacherName', 'date', 'reason', 'status', 'createdAt'],
+        school_subjects: ['id', 'school_id', 'subject'],
+        teacher_subjects: ['id', 'teacher_id', 'subject_id']
+      };
+      const columns = columnsByResource[resource];
+      const csvCell = value => {
+        const text = value === null || value === undefined
+          ? ''
+          : typeof value === 'object'
+            ? JSON.stringify(value)
+            : String(value);
+        const safeText = /^[\s]*[=+\-@]/.test(text) ? `'${text}` : text;
+        return `"${safeText.replace(/"/g, '""')}"`;
+      };
+      const csv = [
+        columns.map(csvCell).join(','),
+        ...result.rows.map(row => columns.map(column => csvCell(row[column])).join(','))
+      ].join('\r\n');
+      const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `studia-${resource}-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showDialog(`Exportação concluída: ${result.count} registros.`);
+    } catch (err) {
+      showDialog(err.message || 'Não foi possível exportar os dados.');
+    }
+  },
+
   async login() {
     const emailInput = $('#auth-email');
     const passwordInput = $('#auth-password');
@@ -2834,7 +3137,7 @@ const actions = {
     try {
       if (user.role === 'dev') {
         const results = await Promise.allSettled([
-          api.get(`/api/schedules?schoolId=${user.school_id}`),
+          api.get(user.school_id ? `/api/schedules?schoolId=${user.school_id}` : '/api/schedules'),
           api.get('/api/teachers'),
           api.get('/api/users'),
           api.get('/api/labs/bookings'),
