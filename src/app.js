@@ -1045,8 +1045,16 @@ const CreateModal = () => `
           <input type="text" id="form-room" placeholder="Sala" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <input type="time" id="form-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" value="18:45" required>
-          <input type="time" id="form-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" value="22:45" required>
+          <input type="time" id="form-start" oninput="actions.updateConsecutiveSchedulePreview()" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" value="18:45" required>
+          <input type="time" id="form-end" oninput="actions.updateConsecutiveSchedulePreview()" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" value="22:45" required>
+        </div>
+        <div class="rounded-xl border border-slate-200 p-3">
+          <label class="flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-700">
+            <input type="checkbox" id="form-double-lesson" onchange="actions.updateConsecutiveSchedulePreview()" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+            Duas aulas seguidas
+          </label>
+          <p class="mt-1 pl-6 text-xs font-medium text-slate-500">O segundo horário começa quando o primeiro termina e terá a mesma duração.</p>
+          <p id="form-double-lesson-preview" class="mt-2 hidden pl-6 text-xs font-bold text-blue-700"></p>
         </div>
         <select id="form-teacher" onchange="actions.updateScheduleSubjectOptions(this.value)" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
           <option value="">Selecione o Professor</option>
@@ -3127,14 +3135,70 @@ const actions = {
       teacherName: teacherSelect.options[teacherSelect.selectedIndex].text,
       school_id: user.school_id
     };
+    const schedulesToCreate = [data];
+
+    if ($('#form-double-lesson')?.checked) {
+      const startMinutes = this.timeToMinutes(data.startTime);
+      const endMinutes = this.timeToMinutes(data.endTime);
+      const duration = endMinutes - startMinutes;
+      const secondEndMinutes = endMinutes + duration;
+      if (duration <= 0 || secondEndMinutes >= 24 * 60) {
+        return showDialog('Confira o horário da primeira aula. A segunda aula deve terminar antes da meia-noite.');
+      }
+      schedulesToCreate.push({
+        ...data,
+        startTime: data.endTime,
+        endTime: this.minutesToTime(secondEndMinutes)
+      });
+    }
 
     try {
-      await api.post('/api/schedules', data);
+      for (let index = 0; index < schedulesToCreate.length; index += 1) {
+        try {
+          await api.post('/api/schedules', schedulesToCreate[index]);
+        } catch (err) {
+          if (index > 0) {
+            await this.init();
+            return showDialog(`A primeira aula foi criada, mas a segunda não pôde ser criada: ${err.message || 'erro desconhecido'}`);
+          }
+          throw err;
+        }
+      }
       this.hideCreateModal();
       this.init();
     } catch (err) {
-      showDialog('Erro ao criar horário.');
+      showDialog(err.message || 'Erro ao criar horário.');
     }
+  },
+
+  timeToMinutes(time) {
+    const [hours, minutes] = (time || '').split(':').map(Number);
+    return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : NaN;
+  },
+
+  minutesToTime(totalMinutes) {
+    const hours = String(Math.floor(totalMinutes / 60)).padStart(2, '0');
+    const minutes = String(totalMinutes % 60).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  },
+
+  updateConsecutiveSchedulePreview() {
+    const checkbox = $('#form-double-lesson');
+    const preview = $('#form-double-lesson-preview');
+    if (!checkbox || !preview) return;
+    preview.classList.toggle('hidden', !checkbox.checked);
+    if (!checkbox.checked) return;
+
+    const startTime = $('#form-start')?.value;
+    const endTime = $('#form-end')?.value;
+    const startMinutes = this.timeToMinutes(startTime);
+    const endMinutes = this.timeToMinutes(endTime);
+    const duration = endMinutes - startMinutes;
+    if (duration <= 0 || endMinutes + duration >= 24 * 60) {
+      preview.textContent = 'Ajuste o primeiro horário para calcular a segunda aula.';
+      return;
+    }
+    preview.textContent = `1ª: ${startTime}–${endTime} | 2ª: ${endTime}–${this.minutesToTime(endMinutes + duration)}`;
   },
 
   async updateSchedule(e) {
