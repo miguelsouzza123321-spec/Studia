@@ -1,5 +1,5 @@
 -- Studia Schema
--- This is the base schema. Apply migrations/001 through migrations/005 in order
+-- This is the base schema. Apply migrations/001 through migrations/006 in order
 -- to reach the current multi-school schema and subject catalog model.
 
 -- Users table
@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   uid UUID PRIMARY KEY,
   email TEXT NOT NULL UNIQUE,
   displayName TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'teacher' CHECK (role IN ('teacher', 'diretor', 'admin', 'dev')),
+  role TEXT NOT NULL DEFAULT 'teacher' CHECK (role IN ('teacher', 'diretor', 'dev')),
   subject TEXT
 );
 
@@ -69,7 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_certificates_date ON certificates(date);
 
 -- Insert sample data (opcional - você pode deletar depois)
 INSERT INTO users (uid, email, displayName, role, subject) VALUES
-  ('550e8400-e29b-41d4-a716-446655440001', 'admin@escola.com', 'Administrador', 'admin', NULL),
+  ('550e8400-e29b-41d4-a716-446655440001', 'dev@escola.com', 'Desenvolvedor', 'dev', NULL),
   ('550e8400-e29b-41d4-a716-446655440002', 'diretor@escola.com', 'Diretor da Escola', 'diretor', NULL),
   ('550e8400-e29b-41d4-a716-446655440003', 'professor@escola.com', 'Professor João', 'teacher', 'Matemática')
 ON CONFLICT DO NOTHING;

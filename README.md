@@ -1,15 +1,15 @@
 # Studia
 
-Sistema de gestão escolar para controle de horários de aula, reservas de laboratório e atestados médicos de professores, com painéis separados para direção (admin) e professores.
+Sistema de gestão escolar para controle de horários de aula, reservas de laboratório e atestados médicos de professores, com áreas para desenvolvedor, direção pedagógica e professores.
 
 ## Funcionalidades principais
 
 - **Horários**: cadastro, edição e exclusão de aulas (matéria, turma, sala, data/horário, professor), com status pendente / confirmado / ausente / aula vaga.
 - **Laboratórios**: reserva de laboratório de Informática ou Química por professores e direção, com tabela geral de agendamentos.
 - **Atestados médicos**: professores enviam atestado (data, motivo, foto opcional); a direção aprova e o sistema marca automaticamente as aulas do dia como "aula vaga".
-- **Usuários**: cadastro de contas (professor/diretor/admin), gestão de perfis e exclusão de usuários.
+- **Usuários**: cadastro de contas (professor/direção pedagógica/desenvolvedor), gestão de perfis e exclusão de usuários.
 - **Relatórios**: grade de horários em PDF por professor ou por turma, com filtros de semana, turno e tamanho de card, além de um gráfico simples de frequência.
-- **Painel do administrador**: visão geral de status da API e gestão de todos os usuários, incluindo outras contas admin — é o topo da hierarquia (admin > diretor > professor).
+- **Área do desenvolvedor**: reúne a gestão global de escolas, usuários, horários, laboratórios e atestados em todas as escolas. Diretores e professores têm acesso limitado à própria escola ou aos próprios dados.
 
 ## Stack
 

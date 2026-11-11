@@ -1,24 +1,24 @@
-# 👨‍💼 Guia do Admin (Plataforma)
+# Guia do Desenvolvedor (Plataforma)
 
-## O que é um Admin?
+## O que faz o desenvolvedor?
 
-**Admin** é o proprietário da plataforma Studia. Tem acesso a:
+O cargo **Desenvolvedor** concentra as funções globais da plataforma. Tem acesso a:
 - ✅ Criar/editar/deletar escolas
 - ✅ Gerenciar diretores
 - ✅ Ver estatísticas globais da plataforma
 - ✅ Acessar painel de infraestrutura
 
-Um admin pode gerenciar **múltiplas escolas** simultaneamente.
+O desenvolvedor pode gerenciar **múltiplas escolas** simultaneamente. As antigas contas de administrador são convertidas para desenvolvedor pela migração `006_remove_admin_role.sql`.
 
 ## Login
 
 1. Abra o site
 2. Click em **"Já tenho conta"**
-3. Email: seu email admin
+3. Email: seu email de desenvolvedor
 4. Senha: sua senha
 5. Click **"Entrar"**
 
-Você vê a **AdminView** com:
+Você vê o console do desenvolvedor com:
 - Aba **"Visão Geral"** (ativa por padrão)
 - Abas de dados: Horários, Laboratórios, Atestados, Usuários, Relatórios
 
@@ -48,7 +48,7 @@ Tabela com informações técnicas:
 Tabela mostrando:
 - Email
 - Nome
-- Cargo (Admin, Diretor, Professor)
+- Cargo (Desenvolvedor, Diretor / Direção Pedagógica, Professor)
 - Escola
 - Ações
 
@@ -69,12 +69,12 @@ O diretor recebe email com credenciais e acessa.
 1. Na tabela, encontre o usuário
 2. Click no dropdown ao lado do nome
 3. Selecione novo cargo:
-   - **Admin** → Promove a administrador
-   - **Diretor** → Promove a diretor
+   - **Desenvolvedor** → Concede acesso global à plataforma
+   - **Diretor / Direção Pedagógica** → Concede acesso à escola associada
    - **Professor** → Rebaixa a professor
 4. Salva automaticamente
 
-⚠️ **Admin não consegue se rebaixar** — proteção contra ficar sem admin
+⚠️ **Não é possível alterar o próprio cargo.**
 
 ### Deletar Usuário
 
@@ -191,7 +191,7 @@ Gerar relatórios em PDF.
 
 ## Permissões
 
-### Admin consegue:
+### Desenvolvedor consegue:
 - ✅ Ver todos os dados de todas as escolas
 - ✅ Criar/editar/deletar usuários
 - ✅ Criar/editar/deletar escolas
@@ -200,10 +200,10 @@ Gerar relatórios em PDF.
 - ✅ Aprovar atestados
 - ✅ Gerar relatórios
 
-### Admin NÃO consegue:
+### Desenvolvedor NÃO consegue:
 - ❌ Deletar sua própria conta
 - ❌ Se rebaixar
-- ❌ Alterar permissões de outro admin
+- ❌ Alterar o próprio cargo
 
 ## Boas Práticas
 

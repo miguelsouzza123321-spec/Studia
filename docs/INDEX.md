@@ -15,7 +15,7 @@ Bem-vindo à documentação do **Studia**, sistema de gestão escolar multi-tena
 - [[DEPLOY|Deploy em Produção (Cloud)]]
 
 ### 👥 **Guias de Uso**
-- [[ADMIN_GUIDE|Guia do Admin (Plataforma)]]
+- [[DEVELOPER_GUIDE|Guia do Desenvolvedor (Plataforma)]]
 - [[DIRETOR_GUIDE|Guia do Diretor (Escola)]]
 - [[PROFESSOR_GUIDE|Guia do Professor]]
 

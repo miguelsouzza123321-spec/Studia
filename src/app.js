@@ -411,9 +411,9 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
 
   return `
     <div class="bg-white border border-slate-300 rounded-lg text-slate-800 shadow-sm flex flex-col justify-between break-inside-avoid text-xs w-full" style="${cardStyle}">
-      <div class="border-b border-slate-300 pb-1 mb-1.5 flex justify-between items-center bg-slate-100 px-2 py-1 rounded">
-        <span class="font-extrabold uppercase text-slate-900 ${headerSize}">${teacher.displayName}${anosSuffix}</span>
-        <span class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight">${teacher.subject || 'Professor'}</span>
+      <div class="border-b border-slate-300 pb-1 mb-1.5 flex flex-wrap justify-between items-center gap-x-2 bg-slate-100 px-2 py-1 rounded">
+        <span class="font-extrabold uppercase text-slate-900 whitespace-normal break-words ${headerSize}">${teacher.displayName}${anosSuffix}</span>
+        <span class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight whitespace-normal break-words">${teacher.subject || 'Professor'}</span>
       </div>
       <table class="w-full text-center border-collapse table-fixed">
         <thead>
@@ -432,7 +432,7 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
                 const isHAF = val === 'HAF';
                 const isVaga = val === 'VAGA';
                 const cellClass = isVaga ? 'text-rose-600 font-black' : (isHAF ? 'text-[#5B99C2] font-black' : (isClass ? 'text-slate-900 font-black' : 'text-slate-400'));
-                return `<td class="${tdSize} py-0.5 truncate ${cellClass}">${val}</td>`;
+                return `<td class="${tdSize} py-0.5 whitespace-normal break-words ${cellClass}">${val}</td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -465,8 +465,9 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
       if (s.status !== 'confirmed' && s.status !== 'pending' && s.status !== 'vaga' && s.subject?.toUpperCase() !== 'HAF') {
         return;
       }
+      const teacher = teachers.find(item => item.uid === s.teacherId);
       grid[startTimeKey][dayName] = {
-        teacherName: s.teacherName || '------',
+        teacherName: teacher?.displayName || s.teacherName || '------',
         subject: s.subject || '------',
         status: s.status
       };
@@ -518,7 +519,7 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
   
   return `
     <div class="bg-white border border-slate-300 rounded-lg text-slate-800 shadow-sm flex flex-col justify-between break-inside-avoid text-xs w-full" style="${cardStyle}">
-      <div class="border-b border-slate-300 pb-1 mb-1.5 flex justify-between items-center bg-slate-100 px-2 py-1 rounded">
+      <div class="border-b border-slate-300 pb-1 mb-1.5 flex flex-wrap justify-between items-center gap-x-2 bg-slate-100 px-2 py-1 rounded">
         <span class="font-extrabold uppercase text-slate-900 truncate ${headerSize}">Turma: ${turmaName}</span>
         <span class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight">GRADE HORÁRIA</span>
       </div>
@@ -540,23 +541,23 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
                 }
                 if (cell.status === 'vaga') {
                   return `
-                    <td class="py-0.5 align-middle leading-tight truncate">
-                      <div class="font-black text-rose-600 ${tdTitleSize} truncate font-black">VAGA</div>
+                    <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
+                      <div class="font-black text-rose-600 ${tdTitleSize} font-black">VAGA</div>
                     </td>
                   `;
                 }
                 const isHAF = cell.subject?.toUpperCase() === 'HAF';
                 if (isHAF) {
                   return `
-                    <td class="py-0.5 align-middle leading-tight truncate">
-                      <div class="font-black text-[#5B99C2] ${tdTitleSize} truncate">HAF</div>
+                    <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
+                      <div class="font-black text-[#5B99C2] ${tdTitleSize}">HAF</div>
                     </td>
                   `;
                 }
                 return `
-                  <td class="py-0.5 align-middle leading-tight truncate">
-                    <div class="font-black text-slate-900 ${tdTitleSize} truncate">${cell.teacherName}</div>
-                    <div class="text-slate-400 font-extrabold truncate uppercase mt-0.5 ${tdSubSize}">${cell.subject}</div>
+                  <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
+                    <div class="font-black text-slate-900 whitespace-normal break-words ${tdTitleSize}">${cell.teacherName}</div>
+                    <div class="text-slate-400 font-extrabold whitespace-normal break-words uppercase mt-0.5 ${tdSubSize}">${cell.subject}</div>
                   </td>
                 `;
               }).join('')}
@@ -755,7 +756,7 @@ const LandingView = () => `
         </div>
 
         <h3 class="text-2xl font-bold mb-2">${authMode === 'login' ? 'Bem-vindo de volta' : 'Nova conta Studia'}</h3>
-        <p class="text-slate-500 text-sm mb-6 font-medium">${authMode === 'login' ? 'Acesse seu painel administrativo.' : 'Crie sua conta de professor.'}</p>
+        <p class="text-slate-500 text-sm mb-6 font-medium">${authMode === 'login' ? 'Acesse seu painel.' : 'Crie sua conta de professor.'}</p>
 
         <div class="space-y-4">
           ${authMode === 'register' ? `
@@ -1231,7 +1232,7 @@ const CreateEscolaModal = () => `
   </div>
 `;
 
-const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
+const CreateUserModal = ({ viewerRole = 'dev' } = {}) => `
   <div id="create-user-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideCreateUserModal()"></div>
     <div class="bg-white w-full max-w-md rounded-2xl p-8 relative z-10 shadow-2xl border border-slate-200">
@@ -1249,7 +1250,7 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Senha</label>
           <input type="password" id="user-password" placeholder="Mínimo 8 caracteres" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required minlength="8">
         </div>
-        ${viewerRole === 'admin' || viewerRole === 'dev' ? `
+        ${viewerRole === 'dev' ? `
           <div>
             <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Escola</label>
             <select id="user-school" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
@@ -1265,18 +1266,17 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Cargo</label>
           <select id="user-role" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
-            ${viewerRole === 'admin' || viewerRole === 'dev'
+            ${viewerRole === 'dev'
               ? `
                 <option value="">Selecione um cargo</option>
                 <option value="teacher">Professor</option>
-                <option value="diretor">Diretor</option>
-                <option value="admin">Administrador</option>
+                <option value="diretor">Diretor / Direção Pedagógica</option>
                 <option value="dev">Desenvolvedor</option>
               `
               : `
                 <option value="">Selecione um cargo</option>
                 <option value="teacher">Professor</option>
-                <option value="diretor">Diretor</option>
+                <option value="diretor">Diretor / Direção Pedagógica</option>
               `
             }
           </select>
@@ -1290,7 +1290,7 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
   </div>
 `;
 
-const AdminOverviewTab = () => {
+const DeveloperOverviewTab = () => {
   const connected = !!apiBaseUrl;
   const totalSchedules = schedules.length;
   const totalUsers = allUsers.length;
@@ -1482,7 +1482,7 @@ const MobileDrawer = ({ theme = 'light', sectionLabel, navItems, profile, drawer
   `;
 };
 
-const ADMIN_NAV_ITEMS = [
+const DEVELOPER_NAV_ITEMS = [
   { id: 'overview', icon: 'activity', label: 'Visão geral' },
   { id: 'escolas', icon: 'building', label: 'Escolas' },
   { id: 'horarios', icon: 'calendar', label: 'Horários' },
@@ -1492,64 +1492,12 @@ const ADMIN_NAV_ITEMS = [
   { id: 'relatorios', icon: 'bar-chart', label: 'Relatórios' },
 ];
 
-const DIRETOR_NAV_ITEMS = ADMIN_NAV_ITEMS.filter(item => item.id !== 'overview' && item.id !== 'escolas');
-const DEV_NAV_ITEMS = ADMIN_NAV_ITEMS;
-
-const AdminView = () => `
-  <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
-    ${Sidebar({ theme: 'dark', sectionLabel: 'Administrador', navItems: ADMIN_NAV_ITEMS })}
-    ${MobileDrawer({ theme: 'dark', sectionLabel: 'Administrador', navItems: ADMIN_NAV_ITEMS, drawerId: 'admin-mobile-sidebar-drawer' })}
-
-    <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden print:bg-white print:overflow-visible">
-      <header class="h-20 bg-white border-b border-slate-200 px-6 md:px-10 flex items-center justify-between shrink-0 print:hidden">
-        <div class="flex items-center gap-3">
-          <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-admin-toggle-menu">
-            <i data-lucide="menu" class="w-6 h-6"></i>
-          </button>
-          <div class="min-w-0">
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">Área administrativa</p>
-            <h2 class="font-black text-base md:text-lg text-slate-900 truncate">Console Studia</h2>
-          </div>
-        </div>
-        <div class="flex items-center gap-2">
-          ${currentTab === 'horarios' ? `
-            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-admin-new">
-              <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo Horário</span>
-            </button>
-          ` : ''}
-          ${currentTab === 'labs' ? `
-            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-admin-lab-new">
-              <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
-            </button>
-          ` : ''}
-          <span class="hidden md:inline-flex items-center gap-2 rounded-full bg-slate-900 text-white px-3 py-1.5 text-xs font-black uppercase tracking-[0.14em]"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Administrador</span>
-        </div>
-      </header>
-
-      <div class="p-4 md:p-10 flex-1 overflow-y-auto space-y-6 md:space-y-8 print:p-0">
-        ${currentTab === 'overview' ? AdminOverviewTab() : ''}
-        ${currentTab === 'escolas' ? EscolasTab() : ''}
-        ${currentTab === 'horarios' ? HorariosTab() : ''}
-        ${currentTab === 'labs' ? LabsTab() : ''}
-        ${currentTab === 'atestados' ? AtestadosTab() : ''}
-        ${currentTab === 'usuarios' ? UsersTab({ viewerRole: 'admin' }) : ''}
-        ${currentTab === 'relatorios' ? RelatoriosTab() : ''}
-      </div>
-    </main>
-
-    ${CreateModal()}
-    ${CertModal()}
-    ${EditModal()}
-    ${DeleteConfirmModal()}
-    ${CreateEscolaModal()}
-    ${CreateUserModal({ viewerRole: 'admin' })}
-  </div>
-`;
+const DIRETOR_NAV_ITEMS = DEVELOPER_NAV_ITEMS.filter(item => item.id !== 'overview' && item.id !== 'escolas');
 
 const DeveloperView = () => `
   <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
-    ${Sidebar({ theme: 'dark', sectionLabel: 'Desenvolvedor', navItems: DEV_NAV_ITEMS })}
-    ${MobileDrawer({ theme: 'dark', sectionLabel: 'Desenvolvedor', navItems: DEV_NAV_ITEMS, drawerId: 'dev-mobile-sidebar-drawer' })}
+    ${Sidebar({ theme: 'dark', sectionLabel: 'Desenvolvedor', navItems: DEVELOPER_NAV_ITEMS })}
+    ${MobileDrawer({ theme: 'dark', sectionLabel: 'Desenvolvedor', navItems: DEVELOPER_NAV_ITEMS, drawerId: 'dev-mobile-sidebar-drawer' })}
 
     <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden print:bg-white print:overflow-visible">
       <header class="h-20 bg-white border-b border-slate-200 px-6 md:px-10 flex items-center justify-between shrink-0 print:hidden">
@@ -1578,7 +1526,7 @@ const DeveloperView = () => `
       </header>
 
       <div class="p-4 md:p-10 flex-1 overflow-y-auto space-y-6 md:space-y-8 print:p-0">
-        ${currentTab === 'overview' ? AdminOverviewTab() : ''}
+        ${currentTab === 'overview' ? DeveloperOverviewTab() : ''}
         ${currentTab === 'escolas' ? EscolasTab() : ''}
         ${currentTab === 'horarios' ? HorariosTab() : ''}
         ${currentTab === 'labs' ? LabsTab() : ''}
@@ -1599,8 +1547,8 @@ const DeveloperView = () => `
 
 const DiretorView = () => `
   <div class="flex h-screen overflow-hidden print:overflow-visible flex-col md:flex-row">
-    ${Sidebar({ theme: 'light', sectionLabel: 'Diretor', navItems: DIRETOR_NAV_ITEMS })}
-    ${MobileDrawer({ theme: 'light', sectionLabel: 'Diretor', navItems: DIRETOR_NAV_ITEMS, drawerId: 'diretor-mobile-sidebar-drawer' })}
+    ${Sidebar({ theme: 'light', sectionLabel: 'Direção Pedagógica', navItems: DIRETOR_NAV_ITEMS })}
+    ${MobileDrawer({ theme: 'light', sectionLabel: 'Direção Pedagógica', navItems: DIRETOR_NAV_ITEMS, drawerId: 'diretor-mobile-sidebar-drawer' })}
 
     <main class="flex-1 flex flex-col bg-slate-50 overflow-hidden print:bg-white print:overflow-visible">
       <header class="h-20 bg-white border-b border-slate-200 px-6 md:px-10 flex items-center justify-between shrink-0 print:hidden">
@@ -1609,18 +1557,18 @@ const DiretorView = () => `
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
           <div class="min-w-0">
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">Direção</p>
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">Direção Pedagógica</p>
             <h2 class="font-black text-base md:text-lg text-slate-900 truncate">Console Studia</h2>
           </div>
         </div>
         <div class="flex gap-2">
           ${currentTab === 'horarios' ? `
-            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-admin-new">
+            <button onclick="actions.showCreateModal()" class="bg-blue-600 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-blue-700 transition-all" id="btn-diretor-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo Horário</span>
             </button>
           ` : ''}
           ${currentTab === 'labs' ? `
-            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-admin-lab-new">
+            <button onclick="actions.showLabModal()" class="bg-slate-900 text-white px-3 md:px-6 py-2 md:py-2.5 rounded-lg font-bold shadow-md flex items-center gap-1.5 md:gap-2 text-xs md:text-sm hover:bg-slate-800 transition-all" id="btn-diretor-lab-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
             </button>
           ` : ''}
@@ -1646,13 +1594,12 @@ const DiretorView = () => `
 
 const ROLE_META = {
   dev: { badge: 'bg-emerald-100 text-emerald-700', label: 'Desenvolvedor' },
-  admin: { badge: 'bg-violet-100 text-violet-700', label: 'Administrador' },
-  diretor: { badge: 'bg-amber-100 text-amber-700', label: 'Diretor' },
+  diretor: { badge: 'bg-amber-100 text-amber-700', label: 'Diretor / Direção Pedagógica' },
   teacher: { badge: 'bg-blue-100 text-blue-700', label: 'Professor' },
 };
 
 const TeacherSubjectAssignments = ({ viewerRole }) => {
-  const canChooseSchool = viewerRole === 'admin' || viewerRole === 'dev';
+  const canChooseSchool = viewerRole === 'dev';
   const activeSchoolId = viewerRole === 'diretor'
     ? user?.school_id
     : (subjectSchoolId || user?.school_id || schools[0]?.id || '');
@@ -1701,9 +1648,9 @@ const TeacherSubjectAssignments = ({ viewerRole }) => {
 };
 
 const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
-  const canManageAllRoles = viewerRole === 'admin' || viewerRole === 'dev';
+  const canManageAllRoles = viewerRole === 'dev';
   const users = [...allUsers]
-    .filter(account => canManageAllRoles || !['admin', 'dev'].includes(account.role))
+    .filter(account => canManageAllRoles || account.role !== 'dev')
     .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
   const editingTeacher = users.find(account => account.uid === editingTeacherSubjectsId && account.role === 'teacher');
   const editingTeacherSubjects = editingTeacher
@@ -1714,7 +1661,7 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
   const allUsersSelected = selectableUserIds.length > 0 && selectedCount === selectableUserIds.length;
 
   const roleOptions = canManageAllRoles
-    ? ['teacher', 'diretor', 'admin', 'dev']
+    ? ['teacher', 'diretor', 'dev']
     : ['teacher', 'diretor'];
 
   return `
@@ -1722,7 +1669,7 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
       <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <div>
           <h3 class="text-2xl font-black text-slate-900">Gestão de usuários</h3>
-          <p class="text-sm text-slate-500 font-medium">${canManageAllRoles ? 'Todas as contas cadastradas no sistema.' : 'Diretores e professores cadastrados na sua escola.'}</p>
+          <p class="text-sm text-slate-500 font-medium">${canManageAllRoles ? 'Todas as contas cadastradas no sistema.' : 'Direção pedagógica e professores cadastrados na sua escola.'}</p>
         </div>
         <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
           ${(canManageAllRoles || viewerRole === 'diretor') ? `
@@ -1745,7 +1692,7 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
         </div>
       ` : ''}
 
-      ${['admin', 'dev', 'diretor'].includes(viewerRole) ? TeacherSubjectAssignments({ viewerRole }) : ''}
+      ${['dev', 'diretor'].includes(viewerRole) ? TeacherSubjectAssignments({ viewerRole }) : ''}
 
       <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
@@ -1847,7 +1794,7 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
                     </select>
                     <button type="button" onclick="actions.assignTeacherSchool('${editingTeacher.uid}')" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Associar escola</button>
                   </div>
-                ` : '<p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este professor ainda não está associado a uma escola. Peça a um administrador para vinculá-lo.</p>'}
+                ` : '<p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este professor ainda não está associado a uma escola. Peça à direção pedagógica para vinculá-lo.</p>'}
               ` : editingTeacherSubjects.length ? editingTeacherSubjects.map(subject => {
                 const isAssigned = (subject.teacherIds || []).includes(editingTeacher.uid);
                 return `
@@ -2087,7 +2034,7 @@ const LabsTab = () => `
           <h4 class="text-lg font-black text-slate-800">Tabela Geral do Cronograma das Reservas</h4>
           <p class="text-xs text-slate-500 font-bold">Acompanhe todos os agendamentos cadastrados no sistema.</p>
         </div>
-        ${labBookings.length > 0 && ['admin', 'dev'].includes(user.role) ? `
+        ${labBookings.length > 0 && user.role === 'dev' ? `
           <button onclick="actions.clearAllLabBookings()" class="text-rose-600 hover:text-rose-700 font-bold text-xs flex items-center gap-1.5 border border-rose-200 bg-rose-50 hover:bg-rose-100 px-4 py-2 rounded-xl transition-all shadow-sm">
             <i data-lucide="trash-2" class="w-4 h-4"></i> Limpar Tabela
           </button>
@@ -2122,7 +2069,7 @@ const LabsTab = () => `
                     </span>
                   </td>
                   <td class="px-8 py-5 text-center">
-                    ${(user.role === 'admin' || user.role === 'dev' || user.role === 'diretor' || b.teacherId === user.uid) ? `
+                    ${(user.role === 'dev' || user.role === 'diretor' || b.teacherId === user.uid) ? `
                       <button onclick="actions.deleteLabBooking(${b.id})" class="text-slate-300 hover:text-rose-500 transition-all cursor-pointer inline-flex items-center" title="Cancelar Reserva">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                       </button>
@@ -2533,7 +2480,7 @@ const slidesContent = [
 
 // --- ACTIONS ---
 const TAB_ACCESS = {
-  admin: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
+  dev: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   dev: ['overview', 'escolas', 'horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   diretor: ['horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
   teacher: ['horarios', 'labs', 'materias', 'atestados'],
@@ -2568,8 +2515,6 @@ const actions = {
       } else {
         if (user.role === 'dev') {
           render(DeveloperView());
-        } else if (user.role === 'admin') {
-          render(AdminView());
         } else if (user.role === 'diretor') {
           render(DiretorView());
         } else {
@@ -2887,7 +2832,7 @@ const actions = {
     if (!user || isRefreshingData) return;
     isRefreshingData = true;
     try {
-      if (user.role === 'admin' || user.role === 'dev') {
+      if (user.role === 'dev') {
         const results = await Promise.allSettled([
           api.get(`/api/schedules?schoolId=${user.school_id}`),
           api.get('/api/teachers'),
@@ -3740,7 +3685,7 @@ const actions = {
     }
   },
 
-  showCreateUserModal(viewerRole = 'admin') {
+  showCreateUserModal(viewerRole = 'dev') {
     const modal = document.getElementById('create-user-modal');
     if (modal) modal.classList.remove('hidden');
   },
@@ -3773,7 +3718,7 @@ const actions = {
     if (!password) return showDialog('Senha é obrigatória.');
     if (password.length < 8) return showDialog('Senha deve ter no mínimo 8 caracteres.');
     if (!role) return showDialog('Cargo é obrigatório.');
-    if (['admin', 'dev'].includes(user?.role) && !schoolId) return showDialog('Selecione a escola do usuário.');
+    if (user?.role === 'dev' && !schoolId) return showDialog('Selecione a escola do usuário.');
 
     // Validação de e-mail simples
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

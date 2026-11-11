@@ -99,7 +99,8 @@ Pronto! https://studia.sua-escola.com rodando.
 - [ ] HTTPS está ativo (🔒 em URL)
 - [ ] Cadastro funciona
 - [ ] Login funciona
-- [ ] Admin consegue criar escola
+- [ ] Desenvolvedor consegue criar escola
+- [ ] Executar `migrations/006_remove_admin_role.sql` no Supabase antes de publicar a versão com os cargos atualizados
 - [ ] Diretor consegue criar professor
 - [ ] Professor consegue criar aula
 - [ ] Dados estão sendo salvos no banco

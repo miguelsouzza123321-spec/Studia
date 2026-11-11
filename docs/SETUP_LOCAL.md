@@ -88,30 +88,32 @@ Abra http://localhost:3000 no navegador.
 
 ## 6. Primeira Execução
 
-### 1️⃣ Criar Conta de Admin
+### 1️⃣ Criar Conta de Desenvolvedor
 
 1. Clique em **"Não tenho conta"**
 2. Preencha:
-   - **Nome:** "Administrador"
-   - **Matéria:** "Admin" (pode ser qualquer coisa)
-   - **Email:** `admin@local.test`
+   - **Nome:** "Desenvolvedor"
+   - **Matéria:** "Desenvolvimento"
+   - **Email:** `dev@local.test`
    - **Senha:** algo seguro
 3. Click **"Criar Conta"**
 4. Você vira professor (padrão)
 
-### 2️⃣ Promover a Admin
+### 2️⃣ Promover a Desenvolvedor
 
 Abra o SQL Editor do Supabase e rode:
 
 ```sql
-update users set role = 'admin' where email = 'admin@local.test';
+update users set role = 'dev' where email = 'dev@local.test';
 ```
 
 ### 3️⃣ Fazer Logout e Login
 
 Agora você vê:
 - Aba **"Visão Geral"** (infra, estatísticas)
-- 6 abas no total (admin)
+- 7 abas no total (desenvolvedor)
+
+Para instalações existentes, execute `migrations/006_remove_admin_role.sql` no SQL Editor do Supabase para migrar as contas antigas.
 
 ## 7. Criar Dados de Teste
 
@@ -119,7 +121,7 @@ Agora você vê:
 
 ```sql
 INSERT INTO schools (name, createdBy) VALUES 
-  ('Escola Teste', (SELECT uid FROM users WHERE role = 'admin' LIMIT 1));
+  ('Escola Teste', (SELECT uid FROM users WHERE role = 'dev' LIMIT 1));
 ```
 
 ### Criar Diretor de Teste
@@ -204,7 +206,7 @@ npm run clean            # Remove dist/
 ## 12. Próximos Passos
 
 - Leia [[ARQUITETURA|Arquitetura do Sistema]]
-- Estude o [[ADMIN_GUIDE|Guia do Admin]]
+- Estude o [[DEVELOPER_GUIDE|Guia do Desenvolvedor]]
 - Veja [[API_ROUTES|Rotas da API]] para entender endpoints
 
 ## 13. Suporte

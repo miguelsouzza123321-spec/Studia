@@ -6,7 +6,7 @@
 
 ```
 ┌─────────────────────────────────────────────────┐
-│         ADMIN PLATAFORMA (Global)               │
+│         DESENVOLVEDOR (Global)                  │
 │  • Cria escolas                                 │
 │  • Gerencia diretores                           │
 │  • Vê estatísticas globais                      │
@@ -55,7 +55,7 @@ let allUsers = [];         // Todos os usuários
 
 // Views (template functions)
 const LandingView = () => `...html...`;
-const AdminView = () => `...html...`;
+const DeveloperView = () => `...html...`;
 const DiretorView = () => `...html...`;
 const TeacherView = () => `...html...`;
 
@@ -98,8 +98,8 @@ GET /api/certificates        → Lista atestados
 POST /api/certificates       → Cria atestado
 PATCH /api/certificates/:id/approve → Aprova atestado
 
-GET /api/schools             → Lista escolas (admin only)
-POST /api/schools            → Cria escola (admin only)
+GET /api/schools             → Lista escolas (desenvolvedor only)
+POST /api/schools            → Cria escola (desenvolvedor only)
 ```
 
 **Dois clientes Supabase:**
@@ -116,7 +116,7 @@ POST /api/schools            → Cria escola (admin only)
 5. `certificates` — Atestados (id, teacherId, reason, status, school_id)
 
 **Isolamento de Dados:**
-- Admin: vê tudo (sem filtro)
+- Desenvolvedor: vê tudo (sem filtro)
 - Diretor: vê apenas `WHERE school_id = :seu_id`
 - Professor: vê apenas suas aulas/atestados (`WHERE teacherId = :seu_uid`)
 
@@ -129,7 +129,7 @@ POST /api/schools            → Cria escola (admin only)
 4. Backend: SELECT * FROM users WHERE uid = ...
 5. Backend: return usuário + school_id
 6. Frontend: localStorage.user = { uid, email, role, school_id, ... }
-7. Frontend: render view apropriada (AdminView/DiretorView/TeacherView)
+7. Frontend: render view apropriada (DeveloperView/DiretorView/TeacherView)
 ```
 
 ## Fluxo de Cadastro
@@ -169,10 +169,10 @@ if (user.role === 'diretor') {
 // Diretor da Escola A nunca vê aulas de Escola B
 ```
 
-### Regra 4: Admin vê tudo (sem filtro)
+### Regra 4: Desenvolvedor vê tudo (sem filtro)
 ```typescript
-if (user.role === 'admin') {
-  // Sem filtro — admin vê schedules de TODAS as escolas
+if (user.role === 'dev') {
+  // Sem filtro — desenvolvedor vê schedules de TODAS as escolas
 }
 ```
 
@@ -191,10 +191,10 @@ if (user.role === 'admin') {
 - SQL injection prevention (já feito via Supabase prepared statements)
 - XSS prevention (escape HTML)
 
-## Fluxo de Dados Tipico: Admin Cria Diretor
+## Fluxo de Dados Típico: Desenvolvedor Cria Diretor
 
 ```
-1. Admin tela → "Criar Diretor" → email@diretor.com
+1. Desenvolvedor acessa Usuários → "Criar Usuário" → email@diretor.com
 2. Frontend: POST /api/auth/register { email, password, role='diretor', school_id='school-xyz' }
 3. Backend:
    a) supabase.auth.admin.createUser(email, password) → uid

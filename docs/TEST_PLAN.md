@@ -21,24 +21,24 @@
 
 #### Criar Contas de Teste
 
-- [ ] **2.1** Cadastrar **Admin de Teste**
-  - Email: `admin@test.local`
-  - Nome: "Admin Teste"
-  - Matéria: "Administração"
+- [ ] **2.1** Cadastrar **Desenvolvedor de Teste**
+  - Email: `dev@test.local`
+  - Nome: "Desenvolvedor Teste"
+  - Matéria: "Desenvolvimento"
   - Resultado: Conta criada como professor (padrão)
 
-- [ ] **2.2** Promover à Admin (SQL):
+- [ ] **2.2** Promover a Desenvolvedor (SQL):
   ```sql
-  UPDATE users SET role = 'admin' WHERE email = 'admin@test.local';
+  UPDATE users SET role = 'dev' WHERE email = 'dev@test.local';
   ```
 
-- [ ] **2.3** Cadastrar **Diretor de Teste A**
+- [ ] **2.3** Cadastrar **Direção Pedagógica de Teste A**
   - Email: `diretor-a@test.local`
   - Nome: "Diretor Escola A"
   - Matéria: "Direção"
   - Resultado: Conta criada como professor
 
-- [ ] **2.4** Cadastrar **Diretor de Teste B**
+- [ ] **2.4** Cadastrar **Direção Pedagógica de Teste B**
   - Email: `diretor-b@test.local`
   - Nome: "Diretor Escola B"
   - Matéria: "Direção"
@@ -55,9 +55,9 @@
 
 ---
 
-### FASE 3: Admin - Criar Escolas
+### FASE 3: Desenvolvedor - Criar Escolas
 
-**Login como:** `admin@test.local` / sua senha
+**Login como:** `dev@test.local` / sua senha
 
 - [ ] **3.1** Acessar aba "Escolas"
   - Resultado: Tabela vazia ou com escolas existentes
@@ -77,12 +77,12 @@
 
 ---
 
-### FASE 4: Admin - Promover Diretores
+### FASE 4: Desenvolvedor - Promover a Direção Pedagógica
 
-**Ainda logado como Admin**
+**Ainda logado como Desenvolvedor**
 
 - [ ] **4.1** Ir para aba "Usuários"
-  - Ver lista de usuários com filtro para não-admins
+  - Ver lista de usuários sem outros perfis de desenvolvedor
 
 - [ ] **4.2** Encontrar "Diretor Escola A" (diretor-a@test.local)
   - Click dropdown de cargo
@@ -104,7 +104,7 @@
     ) WHERE email = 'diretor-b@test.local';
     ```
 
-- [ ] **4.4** Verificar que "Admin de Teste" **não pode se rebaixar**
+- [ ] **4.4** Verificar que "Desenvolvedor de Teste" **não pode alterar o próprio cargo**
   - Tentar clicar no próprio dropdown
   - Resultado: Desabilitado ou não aparece
 
@@ -152,9 +152,9 @@
 
 ### FASE 7: Operações CRUD
 
-#### Admin - Criar e Deletar
+#### Desenvolvedor - Criar e Deletar
 
-**Login como Admin**
+**Login como Desenvolvedor**
 
 - [ ] **7.1** Criar "Escola C"
   - Nome: "Escola C"
@@ -189,7 +189,7 @@
   - Resultado: Erro ou dados vazios, nunca dados de B
 
 - [ ] **8.2** Horários não se misturam entre escolas
-  - Admin cria aula em Escola A
+  - Desenvolvedor cria aula em Escola A
   - Diretor A vê aula
   - Diretor B não vê aula
   - Professor A1 vê sua própria aula
@@ -209,7 +209,7 @@
 - [ ] **8.5** Diretor não consegue criar outro Diretor
   - Login como diretor
   - Tentar promover professor para diretor
-  - Resultado: Bloqueado (só admin consegue)
+  - Resultado: Bloqueado (só desenvolvedor consegue)
 
 ---
 
@@ -218,14 +218,14 @@
 #### Cenário Completo
 
 **Passos:**
-1. Admin cria 2 escolas
-2. Admin promove 2 diretores (um para cada escola)
+1. Desenvolvedor cria 2 escolas
+2. Desenvolvedor promove 2 diretores (um para cada escola)
 3. Cada diretor cria/promove 2 professores
 4. Cada professor cria aulas em sua escola
 5. Verificar isolamento de dados
 
 **Checklist:**
-- [ ] **9.1** Admin vê TODOS os dados de ambas as escolas
+- [ ] **9.1** Desenvolvedor vê TODOS os dados de ambas as escolas
 - [ ] **9.2** Diretor A vê APENAS dados de Escola A
 - [ ] **9.3** Diretor B vê APENAS dados de Escola B
 - [ ] **9.4** Professor A1 vê APENAS suas aulas

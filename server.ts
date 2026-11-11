@@ -368,14 +368,14 @@ app.post('/api/users/create', async (req, res) => {
   }
 
   // VALIDAÇÕES DE PERMISSÃO
-  // Admin pode criar qualquer um
-  if (userRole === 'admin' || userRole === 'dev') {
+  // Desenvolvedor pode criar qualquer perfil.
+  if (userRole === 'dev') {
     // OK - criar qualquer role
   }
   // Diretor pode criar diretor/professor da mesma escola
   else if (userRole === 'diretor') {
-    if (role === 'admin' || role === 'dev') {
-      return res.status(403).json({ error: 'Diretor não pode criar administradores ou desenvolvedores' });
+    if (role === 'dev') {
+      return res.status(403).json({ error: 'Diretores não podem criar desenvolvedores' });
     }
     if (schoolId && schoolId !== userSchoolId) {
       return res.status(403).json({ error: 'Diretor só pode criar usuários da mesma escola' });
@@ -490,7 +490,7 @@ app.get('/api/schedules', async (req, res) => {
 });
 
 app.post('/api/schedules', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
   const { date, startTime, endTime, subject, room, teacherId, teacherName, classGroup, school_id } = req.body;
   if (userInfo.role === 'diretor' && school_id && school_id !== userInfo.school_id) {
@@ -519,7 +519,7 @@ app.post('/api/schedules', async (req, res) => {
 });
 
 app.patch('/api/schedules/:id', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
   if (userInfo.role === 'diretor') {
     const { data: schedule, error: findError } = await supabase.from('schedules').select('school_id').eq('id', req.params.id).maybeSingle();
@@ -554,7 +554,7 @@ app.patch('/api/schedules/:id', async (req, res) => {
 });
 
 app.delete('/api/schedules/:id', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
   if (userInfo.role === 'diretor') {
     const { data: schedule, error: findError } = await supabase.from('schedules').select('school_id').eq('id', req.params.id).maybeSingle();
@@ -567,7 +567,7 @@ app.delete('/api/schedules/:id', async (req, res) => {
 });
 
 app.get('/api/stats', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
   const { data, error } = await supabase.from('schedules').select('status');
   if (error) return res.status(500).json({ error: 'Erro ao buscar estatísticas' });
@@ -575,7 +575,7 @@ app.get('/api/stats', async (req, res) => {
 });
 
 app.get('/api/teachers', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
 
   let query = supabase.from('users').select('*').eq('role', 'teacher');
@@ -592,7 +592,7 @@ app.get('/api/teachers', async (req, res) => {
 });
 
 app.get('/api/users', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
 
   let query = supabase.from('users').select('*').order('displayname', { ascending: true });
@@ -602,7 +602,7 @@ app.get('/api/users', async (req, res) => {
       return res.status(403).json({ error: 'Acesso negado' });
     }
     query = query.eq('school_id', userInfo.school_id);
-    query = query.not('role', 'in', '("admin","dev")');
+    query = query.neq('role', 'dev');
   } else if (req.query.schoolId) {
     query = query.eq('school_id', req.query.schoolId);
   }
@@ -613,7 +613,7 @@ app.get('/api/users', async (req, res) => {
 });
 
 app.patch('/api/users/:uid/school', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
 
   const schoolId = typeof req.body.schoolId === 'string' ? req.body.schoolId : '';
@@ -646,7 +646,7 @@ app.patch('/api/users/:uid/school', async (req, res) => {
 });
 
 app.delete('/api/users/:uid', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
   if (req.params.uid === userInfo.uid) return res.status(400).json({ error: 'Não é possível excluir sua própria conta' });
 
@@ -658,7 +658,7 @@ app.delete('/api/users/:uid', async (req, res) => {
     .maybeSingle();
   if (targetError) return res.status(500).json({ error: 'Erro ao verificar usuário' });
   if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
-  if (userInfo.role === 'diretor' && (target.school_id !== userInfo.school_id || ['admin', 'dev'].includes(target.role))) {
+  if (userInfo.role === 'diretor' && (target.school_id !== userInfo.school_id || target.role === 'dev')) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
@@ -685,7 +685,7 @@ app.delete('/api/users/:uid', async (req, res) => {
 });
 
 // Server-side permission validation
-type AppRole = 'teacher' | 'diretor' | 'admin' | 'dev';
+type AppRole = 'teacher' | 'diretor' | 'dev';
 
 interface UserInfo {
   uid: string;
@@ -693,7 +693,7 @@ interface UserInfo {
   school_id?: string;
 }
 
-const VALID_ROLES: AppRole[] = ['teacher', 'diretor', 'admin', 'dev'];
+const VALID_ROLES: AppRole[] = ['teacher', 'diretor', 'dev'];
 
 const getUserFromDB = async (uid: string): Promise<UserInfo | null> => {
   const { data, error } = await supabase
@@ -754,10 +754,10 @@ app.patch('/api/users/:uid/role', async (req, res) => {
   const target = await getUserFromDB(req.params.uid);
   if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
   if (userInfo.role === 'diretor') {
-    if (target.school_id !== userInfo.school_id || ['admin', 'dev'].includes(target.role) || ['admin', 'dev'].includes(role)) {
+    if (target.school_id !== userInfo.school_id || target.role === 'dev' || role === 'dev') {
       return res.status(403).json({ error: 'Diretores só podem gerenciar perfis da própria escola' });
     }
-  } else if (userInfo.role !== 'admin' && userInfo.role !== 'dev') {
+  } else if (userInfo.role !== 'dev') {
     return res.status(403).json({ error: 'Professores não podem mudar perfis' });
   }
 
@@ -825,7 +825,7 @@ app.delete('/api/labs/bookings/:id', async (req, res) => {
 });
 
 app.delete('/api/labs/bookings-clear-all', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
   const { error } = await supabase.from('lab_bookings').delete().not('id', 'is', null);
   if (error) return res.status(500).json({ error: 'Erro ao limpar reservas' });
@@ -882,7 +882,7 @@ app.post('/api/certificates', async (req, res) => {
 });
 
 app.patch('/api/certificates/:id/approve', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
   const { data: certificate, error: findError } = await supabase.from('certificates').select('teacherid,date').eq('id', req.params.id).maybeSingle();
   if (findError) return res.status(500).json({ error: 'Erro ao buscar certificado' });
@@ -952,7 +952,7 @@ app.patch('/api/certificates/:id/approve', async (req, res) => {
 // ========== SCHOOLS (Multi-tenant) ==========
 
 app.get('/api/schools', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
   const { data, error } = await supabase.from('schools').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar escolas' });
@@ -960,7 +960,7 @@ app.get('/api/schools', async (req, res) => {
 });
 
 app.post('/api/schools', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
   const { name, createdBy } = req.body;
   if (!name) return res.status(400).json({ error: 'Nome da escola é obrigatório' });
@@ -970,7 +970,7 @@ app.post('/api/schools', async (req, res) => {
 });
 
 app.patch('/api/schools/:id', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
   const { name } = req.body;
   if (!name) return res.status(400).json({ error: 'Nome é obrigatório' });
@@ -980,7 +980,7 @@ app.patch('/api/schools/:id', async (req, res) => {
 });
 
 app.delete('/api/schools/:id', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
   const { error } = await supabase.from('schools').delete().eq('id', req.params.id);
   if (error) return res.status(500).json({ error: 'Erro ao deletar escola' });
@@ -989,7 +989,7 @@ app.delete('/api/schools/:id', async (req, res) => {
 
 // School subject catalog and teacher assignments
 app.get('/api/school-subjects', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor', 'teacher']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor', 'teacher']);
   if (!userInfo) return;
 
   const requestedSchoolId = typeof req.query.schoolId === 'string' ? req.query.schoolId : undefined;
@@ -1032,7 +1032,7 @@ app.get('/api/school-subjects', async (req, res) => {
 });
 
 app.post('/api/school-subjects', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
 
   const subject = sanitizeString(req.body.subject);
@@ -1061,7 +1061,7 @@ app.post('/api/school-subjects', async (req, res) => {
 });
 
 app.delete('/api/school-subjects/:id', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
 
   const { data: subject, error: findError } = await supabase
@@ -1081,7 +1081,7 @@ app.delete('/api/school-subjects/:id', async (req, res) => {
 });
 
 app.post('/api/school-subjects/:id/teachers', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor', 'teacher']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor', 'teacher']);
   if (!userInfo) return;
   const teacherId = typeof req.body.teacherId === 'string' ? req.body.teacherId : '';
   if (!teacherId) return res.status(400).json({ error: 'Professor obrigatório' });
@@ -1123,7 +1123,7 @@ app.post('/api/school-subjects/:id/teachers', async (req, res) => {
 });
 
 app.delete('/api/school-subjects/:id/teachers/:teacherId', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor', 'teacher']);
+  const userInfo = await requireRole(req, res, ['dev', 'diretor', 'teacher']);
   if (!userInfo) return;
 
   const { data: subject, error: subjectError } = await supabase
@@ -1164,7 +1164,7 @@ app.get('/api/teachers/:uid/subjects', async (req, res) => {
       return res.status(403).json({ error: 'Acesso negado' });
     }
   }
-  if (!['teacher', 'diretor', 'admin', 'dev'].includes(userInfo.role)) {
+  if (!['teacher', 'diretor', 'dev'].includes(userInfo.role)) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
