@@ -97,6 +97,16 @@ const saveTeacherSubjects = async (teacherId: string, schoolId: string | null, s
   if (subjects.length === 0) return null;
   if (!schoolId) return new Error('O professor precisa estar associado a uma escola para cadastrar matérias.');
 
+  const { data: school, error: schoolError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('id', schoolId)
+    .maybeSingle();
+
+  if (schoolError || !school) {
+    return new Error('Escola inválida. Crie ou selecione uma escola antes de cadastrar matérias.');
+  }
+
   for (const subject of subjects) {
     const { data: catalogSubject, error: subjectError } = await getOrCreateSchoolSubject(schoolId, subject);
     if (subjectError || !catalogSubject) return subjectError || new Error('Não foi possível cadastrar a matéria.');
@@ -227,7 +237,10 @@ app.post('/api/auth/register', async (req, res) => {
     const subjectError = await saveTeacherSubjects(uid, finalSchoolId, subjects);
     if (subjectError) {
       console.error('[REGISTER] Could not save teacher subjects:', subjectError);
-      return res.status(500).json({ error: `Erro ao salvar matérias: ${subjectError.message}` });
+      const friendlyMessage = subjectError.message?.includes('foreign key') || subjectError.message?.includes('school_id')
+        ? 'Escola inválida. Crie ou selecione uma escola antes de continuar.'
+        : `Erro ao salvar matérias: ${subjectError.message}`;
+      return res.status(400).json({ error: friendlyMessage });
     }
 
     const { data: sessionData, error: sessionError } = await supabaseAuth.auth.signInWithPassword({ email, password });
@@ -354,6 +367,10 @@ app.post('/api/users/create', async (req, res) => {
     return res.status(400).json({ error: 'Cargo inválido' });
   }
 
+  if (role !== 'teacher' && !schoolId) {
+    return res.status(400).json({ error: 'Para criar um diretor ou administrador, primeiro escolha uma escola válida.' });
+  }
+
   // VALIDAÇÕES DE PERMISSÃO
   // Admin pode criar qualquer um
   if (userRole === 'admin' || userRole === 'dev') {
@@ -392,7 +409,7 @@ app.post('/api/users/create', async (req, res) => {
     }
 
     const uid = authData.user.id;
-    const finalSchoolId = userRole === 'diretor' ? userSchoolId : (schoolId || DEFAULT_SCHOOL_ID);
+    const finalSchoolId = userRole === 'diretor' ? userSchoolId : (schoolId || userSchoolId || DEFAULT_SCHOOL_ID);
 
     // Inserir na tabela users (sem school_id primeiro)
     const insertResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=*`, {
@@ -437,7 +454,10 @@ app.post('/api/users/create', async (req, res) => {
         : null;
       if (subjectError) {
         console.error('[CREATE_USER] Could not save teacher subjects:', subjectError);
-        return res.status(500).json({ error: `Usuário criado, mas não foi possível salvar as matérias: ${subjectError.message}` });
+        const friendlyMessage = subjectError.message?.includes('Escola inválida') || subjectError.message?.includes('school_id')
+          ? 'Escola inválida. Crie ou selecione uma escola antes de continuar.'
+          : `Usuário criado, mas não foi possível salvar as matérias: ${subjectError.message}`;
+        return res.status(400).json({ error: friendlyMessage });
       }
     }
 
@@ -945,19 +965,25 @@ app.delete('/api/schools/:id', async (req, res) => {
 
 // School subject catalog and teacher assignments
 app.get('/api/school-subjects', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor', 'teacher']);
   if (!userInfo) return;
 
   const requestedSchoolId = typeof req.query.schoolId === 'string' ? req.query.schoolId : undefined;
   if (userInfo.role === 'diretor' && !userInfo.school_id) {
     return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
   }
+  if (userInfo.role === 'teacher' && !userInfo.school_id) {
+    return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+  }
   if (userInfo.role === 'diretor' && requestedSchoolId && requestedSchoolId !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'teacher' && requestedSchoolId && requestedSchoolId !== userInfo.school_id) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
 
   let query = supabase.from('school_subjects').select('id,school_id,subject').order('subject', { ascending: true });
-  const schoolId = userInfo.role === 'diretor' ? userInfo.school_id : requestedSchoolId;
+  const schoolId = userInfo.role === 'teacher' ? userInfo.school_id : (userInfo.role === 'diretor' ? userInfo.school_id : requestedSchoolId);
   if (schoolId) query = query.eq('school_id', schoolId);
   const { data: subjects, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar matérias da escola' });
@@ -1031,7 +1057,7 @@ app.delete('/api/school-subjects/:id', async (req, res) => {
 });
 
 app.post('/api/school-subjects/:id/teachers', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor', 'teacher']);
   if (!userInfo) return;
   const teacherId = typeof req.body.teacherId === 'string' ? req.body.teacherId : '';
   if (!teacherId) return res.status(400).json({ error: 'Professor obrigatório' });
@@ -1046,8 +1072,17 @@ app.post('/api/school-subjects/:id/teachers', async (req, res) => {
   if (userInfo.role === 'diretor' && !userInfo.school_id) {
     return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
   }
+  if (userInfo.role === 'teacher' && !userInfo.school_id) {
+    return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+  }
   if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
     return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'teacher' && subject.school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'teacher' && teacherId !== userInfo.uid) {
+    return res.status(403).json({ error: 'Você só pode vincular suas próprias matérias' });
   }
 
   const teacher = await getUserFromDB(teacherId);
@@ -1064,7 +1099,7 @@ app.post('/api/school-subjects/:id/teachers', async (req, res) => {
 });
 
 app.delete('/api/school-subjects/:id/teachers/:teacherId', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor']);
+  const userInfo = await requireRole(req, res, ['admin', 'dev', 'diretor', 'teacher']);
   if (!userInfo) return;
 
   const { data: subject, error: subjectError } = await supabase
@@ -1076,6 +1111,12 @@ app.delete('/api/school-subjects/:id/teachers/:teacherId', async (req, res) => {
   if (!subject) return res.status(404).json({ error: 'Matéria não encontrada' });
   if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
     return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'teacher' && subject.school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  if (userInfo.role === 'teacher' && req.params.teacherId !== userInfo.uid) {
+    return res.status(403).json({ error: 'Você só pode remover suas próprias matérias' });
   }
 
   const { error } = await supabase.from('teacher_subjects')

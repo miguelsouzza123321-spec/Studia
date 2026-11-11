@@ -206,6 +206,14 @@ const api = {
       }
     }
 
+    if (res.status === 401 && user && !url.startsWith('/api/auth/')) {
+      localStorage.removeItem('user');
+      user = null;
+      currentTab = 'horarios';
+      render(LandingView());
+      throw new Error('Sua sessão não é mais válida. Entre novamente com uma conta ativa para continuar.');
+    }
+
     const text = await res.text();
     let result;
     try {
@@ -1480,9 +1488,9 @@ const AdminView = () => `
           <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-admin-toggle-menu">
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Área administrativa</p>
-            <h2 class="font-black text-base md:text-lg text-slate-900">Console Studia</h2>
+          <div class="min-w-0">
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">Área administrativa</p>
+            <h2 class="font-black text-base md:text-lg text-slate-900 truncate">Console Studia</h2>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -1531,9 +1539,9 @@ const DeveloperView = () => `
           <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-dev-toggle-menu">
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Área do desenvolvedor</p>
-            <h2 class="font-black text-base md:text-lg text-slate-900">Console Studia</h2>
+          <div class="min-w-0">
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">Área do desenvolvedor</p>
+            <h2 class="font-black text-base md:text-lg text-slate-900 truncate">Console Studia</h2>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -1582,9 +1590,9 @@ const DiretorView = () => `
           <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-diretor-toggle-menu">
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
-          <div>
-            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">Direção</p>
-            <h2 class="font-black text-base md:text-lg text-slate-900">Console Studia</h2>
+          <div class="min-w-0">
+            <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400 truncate">Direção</p>
+            <h2 class="font-black text-base md:text-lg text-slate-900 truncate">Console Studia</h2>
           </div>
         </div>
         <div class="flex gap-2">
@@ -1918,34 +1926,62 @@ const MateriasTab = () => `
       </button>
     </div>
 
-    <div class="grid gap-4">
-      ${(() => {
-        const teacherSubjects = window.teacherSubjects || [];
-        if (teacherSubjects.length === 0) {
+    <div class="space-y-5">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+        <h4 class="text-sm font-black uppercase tracking-[0.18em] text-slate-400 mb-4">Editar minhas matérias</h4>
+        ${(() => {
+          const availableSubjects = (schoolSubjects || []).filter(item => item.school_id === user?.school_id);
+          const mySubjects = new Set((window.teacherSubjects || []).map(item => item.subject));
+
+          if (!availableSubjects.length) {
+            return `<p class="text-sm font-medium text-slate-500">Ainda não há matérias cadastradas para a sua escola.</p>`;
+          }
+
           return `
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-              <i data-lucide="book" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-              <p class="text-slate-400 font-bold">Você ainda não adicionou nenhuma matéria.</p>
+            <div class="flex flex-wrap gap-2">
+              ${availableSubjects.map(subject => {
+                const checked = mySubjects.has(subject.subject);
+                return `
+                  <label class="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${checked ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-slate-50 text-slate-600'}">
+                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="actions.setTeacherSubject('${subject.id}', '${user.uid}', this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    ${subject.subject}
+                  </label>
+                `;
+              }).join('')}
             </div>
           `;
-        }
-        return teacherSubjects.map(s => `
-          <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex items-center justify-between hover:shadow-md transition-all">
-            <div class="flex items-center gap-4">
-              <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
-                <i data-lucide="book-open" class="w-6 h-6 text-blue-600"></i>
+        })()}
+      </div>
+
+      <div class="grid gap-4">
+        ${(() => {
+          const teacherSubjects = window.teacherSubjects || [];
+          if (teacherSubjects.length === 0) {
+            return `
+              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
+                <i data-lucide="book" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
+                <p class="text-slate-400 font-bold">Você ainda não adicionou nenhuma matéria.</p>
               </div>
-              <div>
-                <h4 class="font-bold text-slate-900">${s.subject}</h4>
-                <p class="text-xs text-slate-400">Matéria</p>
+            `;
+          }
+          return teacherSubjects.map(s => `
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex items-center justify-between hover:shadow-md transition-all">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <i data-lucide="book-open" class="w-6 h-6 text-blue-600"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-slate-900">${s.subject}</h4>
+                  <p class="text-xs text-slate-400">Matéria</p>
+                </div>
               </div>
+              <button onclick="actions.deleteMatéria('${s.subject}')" class="text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-all">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
+              </button>
             </div>
-            <button onclick="actions.deleteMatéria('${s.subject}')" class="text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-all">
-              <i data-lucide="trash-2" class="w-5 h-5"></i>
-            </button>
-          </div>
-        `).join('');
-      })()}
+          `).join('');
+        })()}
+      </div>
     </div>
   </div>
 `;
@@ -2848,12 +2884,13 @@ const actions = {
           api.get(`/api/schedules?teacherId=${user.uid}`),
           api.get('/api/labs/bookings'),
           api.get('/api/certificates'),
-          api.get(`/api/teachers/${user.uid}/subjects`)
+          api.get(`/api/teachers/${user.uid}/subjects`),
+          api.get('/api/school-subjects')
         ]);
-        const [s, lb, c, m] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, lb, c, m, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         allUsers = [];
-        schoolSubjects = [];
+        schoolSubjects = subs || [];
         labBookings = lb || [];
         certificates = c || [];
         window.teacherSubjects = m || [];
