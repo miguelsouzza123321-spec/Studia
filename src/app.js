@@ -74,6 +74,7 @@ let schedules = [];
 let teachers = [];
 let allUsers = [];
 let selectedUserIds = new Set();
+let editingTeacherSubjectsId = null;
 let schools = [];
 let schoolSubjects = [];
 let subjectSchoolId = '';
@@ -1703,6 +1704,10 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
   const users = [...allUsers]
     .filter(account => canManageAllRoles || !['admin', 'dev'].includes(account.role))
     .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+  const editingTeacher = users.find(account => account.uid === editingTeacherSubjectsId && account.role === 'teacher');
+  const editingTeacherSubjects = editingTeacher
+    ? schoolSubjects.filter(subject => subject.school_id === editingTeacher.school_id)
+    : [];
   const selectableUserIds = users.filter(account => account.uid !== user?.uid).map(account => account.uid);
   const selectedCount = selectableUserIds.filter(uid => selectedUserIds.has(uid)).length;
   const allUsersSelected = selectableUserIds.length > 0 && selectedCount === selectableUserIds.length;
@@ -1792,7 +1797,16 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
                       </select>
                     `}
                   </td>
-                  <td class="px-6 py-4 text-sm text-slate-600 font-medium">${schoolSubjects.filter(subject => (subject.teacherIds || []).includes(u.uid)).map(subject => subject.subject).join(', ') || '—'}</td>
+                  <td class="px-6 py-4 text-sm text-slate-600 font-medium">
+                    ${u.role === 'teacher' ? `
+                      <div class="flex min-w-40 flex-col items-start gap-2">
+                        <span>${schoolSubjects.filter(subject => subject.school_id === u.school_id && (subject.teacherIds || []).includes(u.uid)).map(subject => subject.subject).join(', ') || '—'}</span>
+                        <button type="button" onclick="actions.toggleTeacherSubjectsEditor('${u.uid}')" class="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 px-2.5 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-50">
+                          <i data-lucide="pencil" class="h-3.5 w-3.5"></i> Editar matérias
+                        </button>
+                      </div>
+                    ` : '—'}
+                  </td>
                   <td class="px-6 py-4 text-right">
                     <button
                       onclick="actions.deleteUser('${u.uid}', '${(u.displayName || 'Usuário').replace(/'/g, "\\'")}', '${u.email || 'usuário'}')"
@@ -1809,6 +1823,39 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
           </table>
         </div>
       </div>
+      ${editingTeacher ? `
+        <div class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4" role="presentation">
+          <section class="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="teacher-subjects-title">
+            <header class="flex items-start justify-between gap-4 border-b border-slate-200 p-5">
+              <div>
+                <h4 id="teacher-subjects-title" class="text-lg font-black text-slate-900">Matérias de ${editingTeacher.displayName || editingTeacher.email}</h4>
+                <p class="mt-1 text-sm font-medium text-slate-500">Marque ou desmarque as matérias deste professor.</p>
+              </div>
+              <button type="button" onclick="actions.closeTeacherSubjectsEditor()" class="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Fechar edição de matérias">
+                <i data-lucide="x" class="h-5 w-5"></i>
+              </button>
+            </header>
+            <div class="max-h-[60vh] space-y-2 overflow-y-auto p-5">
+              ${!editingTeacher.school_id ? `
+                <p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este professor ainda não está associado a uma escola.</p>
+              ` : editingTeacherSubjects.length ? editingTeacherSubjects.map(subject => {
+                const isAssigned = (subject.teacherIds || []).includes(editingTeacher.uid);
+                return `
+                  <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                    <input type="checkbox" ${isAssigned ? 'checked' : ''} onchange="actions.setTeacherSubject('${subject.id}', '${editingTeacher.uid}', this.checked)" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
+                    ${subject.subject}
+                  </label>
+                `;
+              }).join('') : `
+                <p class="rounded-xl bg-slate-50 p-4 text-sm font-semibold text-slate-600">Não há matérias cadastradas para a escola deste professor.</p>
+              `}
+            </div>
+            <footer class="flex justify-end border-t border-slate-200 p-4">
+              <button type="button" onclick="actions.closeTeacherSubjectsEditor()" class="rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800">Concluir</button>
+            </footer>
+          </section>
+        </div>
+      ` : ''}
     </div>
   `;
 };
@@ -2918,6 +2965,16 @@ const actions = {
     const selectableUsers = allUsers.filter(account => account.uid !== user?.uid);
     if (checked) selectableUsers.forEach(account => selectedUserIds.add(account.uid));
     else selectableUsers.forEach(account => selectedUserIds.delete(account.uid));
+    this.renderCurrentView();
+  },
+
+  toggleTeacherSubjectsEditor(teacherId) {
+    editingTeacherSubjectsId = editingTeacherSubjectsId === teacherId ? null : teacherId;
+    this.renderCurrentView();
+  },
+
+  closeTeacherSubjectsEditor() {
+    editingTeacherSubjectsId = null;
     this.renderCurrentView();
   },
 
