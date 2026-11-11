@@ -1241,6 +1241,15 @@ const CreateUserModal = ({ viewerRole = 'admin' } = {}) => `
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Senha</label>
           <input type="password" id="user-password" placeholder="Mínimo 8 caracteres" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required minlength="8">
         </div>
+        ${viewerRole === 'admin' || viewerRole === 'dev' ? `
+          <div>
+            <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Escola</label>
+            <select id="user-school" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+              <option value="">Selecione uma escola</option>
+              ${schools.map(school => `<option value="${school.id}">${school.name}</option>`).join('')}
+            </select>
+          </div>
+        ` : ''}
         <div>
           <label class="text-xs font-bold text-slate-500 uppercase block mb-2">Matérias</label>
           <input type="text" id="user-subject" placeholder="Ex: Matemática, Física, Química" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900">
@@ -1640,16 +1649,13 @@ const TeacherSubjectAssignments = ({ viewerRole }) => {
     ? user?.school_id
     : (subjectSchoolId || user?.school_id || schools[0]?.id || '');
   const subjects = schoolSubjects.filter(item => item.school_id === activeSchoolId);
-  const schoolTeachers = allUsers
-    .filter(account => account.role === 'teacher' && account.school_id === activeSchoolId)
-    .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
 
   return `
     <section class="space-y-5 rounded-3xl border border-slate-200 bg-white p-5 md:p-7 shadow-sm">
       <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
-          <h4 class="text-xl font-black text-slate-900">Matérias e professores</h4>
-          <p class="mt-1 text-sm font-medium text-slate-500">O catálogo pertence à escola. Remover um professor apenas desvincula suas matérias; o catálogo e os horários antigos permanecem.</p>
+          <h4 class="text-xl font-black text-slate-900">Matérias da escola</h4>
+          <p class="mt-1 text-sm font-medium text-slate-500">Gerencie o catálogo de matérias desta escola.</p>
         </div>
         ${canChooseSchool ? `
           <select onchange="actions.selectSubjectSchool(this.value)" class="w-full md:w-72 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700" aria-label="Escola do catálogo de matérias">
@@ -1672,25 +1678,12 @@ const TeacherSubjectAssignments = ({ viewerRole }) => {
         <div class="space-y-3">
           ${subjects.map(subject => `
             <div class="rounded-2xl border border-slate-200 p-4">
-              <div class="mb-3 flex items-center justify-between gap-3">
+              <div class="flex items-center justify-between gap-3">
                 <h5 class="font-black text-slate-800">${subject.subject}</h5>
                 <button type="button" onclick="actions.deleteSchoolSubject('${subject.id}', '${subject.subject.replace(/'/g, "\\'")}')" class="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" aria-label="Excluir matéria ${subject.subject}" title="Excluir matéria">
                   <i data-lucide="trash-2" class="h-4 w-4"></i>
                 </button>
               </div>
-              ${schoolTeachers.length ? `
-                <div class="flex flex-wrap gap-2">
-                  ${schoolTeachers.map(teacher => {
-                    const isAssigned = (subject.teacherIds || []).includes(teacher.uid);
-                    return `
-                      <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border ${isAssigned ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-white text-slate-600'} px-3 py-1.5 text-xs font-bold">
-                        <input type="checkbox" ${isAssigned ? 'checked' : ''} onchange="actions.setTeacherSubject('${subject.id}', '${teacher.uid}', this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                        ${teacher.displayName || teacher.email}
-                      </label>
-                    `;
-                  }).join('')}
-                </div>
-              ` : '<p class="text-xs font-medium text-slate-400">Cadastre professores nesta escola para vinculá-los às matérias.</p>'}
             </div>
           `).join('')}
         </div>
@@ -1837,7 +1830,16 @@ const UsersTab = ({ viewerRole = 'diretor' } = {}) => {
             </header>
             <div class="max-h-[60vh] space-y-2 overflow-y-auto p-5">
               ${!editingTeacher.school_id ? `
-                <p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este professor ainda não está associado a uma escola.</p>
+                ${canManageAllRoles ? `
+                  <div class="space-y-3 rounded-xl bg-amber-50 p-4">
+                    <p class="text-sm font-semibold text-amber-800">Este professor ainda não está associado a uma escola. Selecione a escola para continuar.</p>
+                    <select id="teacher-school-${editingTeacher.uid}" class="w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                      <option value="">Selecione uma escola</option>
+                      ${schools.map(school => `<option value="${school.id}">${school.name}</option>`).join('')}
+                    </select>
+                    <button type="button" onclick="actions.assignTeacherSchool('${editingTeacher.uid}')" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700">Associar escola</button>
+                  </div>
+                ` : '<p class="rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-800">Este professor ainda não está associado a uma escola. Peça a um administrador para vinculá-lo.</p>'}
               ` : editingTeacherSubjects.length ? editingTeacherSubjects.map(subject => {
                 const isAssigned = (subject.teacherIds || []).includes(editingTeacher.uid);
                 return `
@@ -2973,6 +2975,19 @@ const actions = {
     this.renderCurrentView();
   },
 
+  async assignTeacherSchool(teacherId) {
+    const schoolId = document.getElementById(`teacher-school-${teacherId}`)?.value;
+    if (!schoolId) return showDialog('Selecione uma escola para continuar.');
+
+    try {
+      await api.patch(`/api/users/${teacherId}/school`, { schoolId });
+      await this.refreshData();
+      this.renderCurrentView();
+    } catch (err) {
+      showDialog(err.message || 'Não foi possível associar o professor à escola.');
+    }
+  },
+
   closeTeacherSubjectsEditor() {
     editingTeacherSubjectsId = null;
     this.renderCurrentView();
@@ -3674,6 +3689,7 @@ const actions = {
     document.getElementById('user-email')?.value && (document.getElementById('user-email').value = '');
     document.getElementById('user-password')?.value && (document.getElementById('user-password').value = '');
     document.getElementById('user-subject')?.value && (document.getElementById('user-subject').value = '');
+    document.getElementById('user-school')?.value && (document.getElementById('user-school').value = '');
     document.getElementById('user-role')?.value && (document.getElementById('user-role').value = '');
   },
 
@@ -3685,6 +3701,7 @@ const actions = {
     const password = document.getElementById('user-password')?.value;
     const subject = document.getElementById('user-subject')?.value?.trim();
     const role = document.getElementById('user-role')?.value;
+    const schoolId = document.getElementById('user-school')?.value;
 
     // Validações básicas
     if (!displayName) return showDialog('Nome é obrigatório.');
@@ -3692,6 +3709,7 @@ const actions = {
     if (!password) return showDialog('Senha é obrigatória.');
     if (password.length < 8) return showDialog('Senha deve ter no mínimo 8 caracteres.');
     if (!role) return showDialog('Cargo é obrigatório.');
+    if (['admin', 'dev'].includes(user?.role) && !schoolId) return showDialog('Selecione a escola do usuário.');
 
     // Validação de e-mail simples
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -3703,6 +3721,7 @@ const actions = {
         email,
         password,
         role,
+        schoolId,
         userRole: user?.role,
         userSchoolId: user?.school_id
       };

@@ -367,10 +367,6 @@ app.post('/api/users/create', async (req, res) => {
     return res.status(400).json({ error: 'Cargo inválido' });
   }
 
-  if (role !== 'teacher' && !schoolId) {
-    return res.status(400).json({ error: 'Para criar um diretor ou administrador, primeiro escolha uma escola válida.' });
-  }
-
   // VALIDAÇÕES DE PERMISSÃO
   // Admin pode criar qualquer um
   if (userRole === 'admin' || userRole === 'dev') {
@@ -391,6 +387,20 @@ app.post('/api/users/create', async (req, res) => {
   }
 
   try {
+    const finalSchoolId = userRole === 'diretor' ? userSchoolId : (schoolId || userSchoolId);
+    if (!finalSchoolId) {
+      return res.status(400).json({ error: 'Selecione uma escola válida para este usuário.' });
+    }
+
+    const { data: validSchool, error: schoolValidationError } = await supabase
+      .from('schools')
+      .select('id')
+      .eq('id', finalSchoolId)
+      .maybeSingle();
+    if (schoolValidationError || !validSchool) {
+      return res.status(400).json({ error: 'A escola selecionada não foi encontrada. Escolha uma escola cadastrada.' });
+    }
+
     // Criar usuário no Auth
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
@@ -409,43 +419,24 @@ app.post('/api/users/create', async (req, res) => {
     }
 
     const uid = authData.user.id;
-    const finalSchoolId = userRole === 'diretor' ? userSchoolId : (schoolId || userSchoolId || DEFAULT_SCHOOL_ID);
 
-    // Inserir na tabela users (sem school_id primeiro)
-    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=*`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseServiceRoleKey,
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
+    const { data: userData, error: insertError } = await supabase
+      .from('users')
+      .insert({
         uid,
         email,
         displayname: displayName,
         role,
-        subject: subject || null
+        subject: subject || null,
+        school_id: finalSchoolId
       })
-    });
-
-    if (!insertResponse.ok) {
-      console.error('[CREATE_USER] Insert failed');
-      await supabase.auth.admin.deleteUser(uid);
-      return res.status(500).json({ error: 'Erro ao criar perfil no banco' });
-    }
-
-    // Atualizar com school_id
-    const { data: userData, error: updateError } = await supabase
-      .from('users')
-      .update({ school_id: finalSchoolId })
-      .eq('uid', uid)
       .select('uid,email,displayname,role,subject,school_id')
       .single();
 
-    if (updateError) {
-      console.error('[CREATE_USER] Update school_id failed:', updateError);
-      // Não falha - continua sem school_id
+    if (insertError) {
+      console.error('[CREATE_USER] Profile insert failed:', insertError);
+      await supabase.auth.admin.deleteUser(uid);
+      return res.status(500).json({ error: 'Não foi possível criar o perfil associado à escola. Nenhuma conta foi criada.' });
     }
 
     if (role === 'teacher') {
@@ -461,7 +452,7 @@ app.post('/api/users/create', async (req, res) => {
       }
     }
 
-    res.json(transformKeys(userData || { uid, email, displayname: displayName, role, school_id: finalSchoolId }));
+    res.json(transformKeys(userData));
   } catch (err) {
     console.error('[CREATE_USER] Error:', err);
     res.status(500).json({ error: 'Erro ao criar usuário' });
@@ -618,6 +609,39 @@ app.get('/api/users', async (req, res) => {
 
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: 'Erro ao buscar usuários' });
+  res.json(transformKeys(data));
+});
+
+app.patch('/api/users/:uid/school', async (req, res) => {
+  const userInfo = await requireRole(req, res, ['admin', 'dev']);
+  if (!userInfo) return;
+
+  const schoolId = typeof req.body.schoolId === 'string' ? req.body.schoolId : '';
+  if (!schoolId) return res.status(400).json({ error: 'Selecione uma escola.' });
+
+  const { data: target, error: targetError } = await supabase
+    .from('users')
+    .select('uid,role')
+    .eq('uid', req.params.uid)
+    .maybeSingle();
+  if (targetError) return res.status(500).json({ error: 'Erro ao verificar usuário' });
+  if (!target) return res.status(404).json({ error: 'Usuário não encontrado' });
+  if (target.role !== 'teacher') return res.status(400).json({ error: 'Esta ação só pode associar professores a uma escola.' });
+
+  const { data: school, error: schoolError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('id', schoolId)
+    .maybeSingle();
+  if (schoolError || !school) return res.status(400).json({ error: 'A escola selecionada não foi encontrada.' });
+
+  const { data, error } = await supabase
+    .from('users')
+    .update({ school_id: schoolId })
+    .eq('uid', req.params.uid)
+    .select('uid,email,displayname,role,school_id')
+    .single();
+  if (error) return res.status(500).json({ error: 'Não foi possível associar o professor à escola.' });
   res.json(transformKeys(data));
 });
 
