@@ -229,7 +229,7 @@ app.use('/api', (req, res, next) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    let { email, password, displayName, subject, school_id } = req.body;
+    let { email, password, displayName, subject } = req.body;
 
     // Sanitizar entrada
     email = sanitizeEmail(email);
@@ -264,7 +264,6 @@ app.post('/api/auth/register', async (req, res) => {
 
     const uid = authData.user.id;
     const finalRole = 'teacher';
-    const finalSchoolId = await ensureDefaultSchoolExists(school_id);
 
     const { data: userData, error: insertError } = await supabase
       .from('users')
@@ -274,7 +273,7 @@ app.post('/api/auth/register', async (req, res) => {
         displayname: displayName,
         role: finalRole,
         subject: subject || null,
-        school_id: finalSchoolId
+        school_id: null
       })
       .select('uid,email,displayname,role,subject,school_id')
       .single();
@@ -283,15 +282,6 @@ app.post('/api/auth/register', async (req, res) => {
       console.error('[REGISTER] Insert failed:', insertError);
       await supabase.auth.admin.deleteUser(uid);
       return res.status(500).json({ error: `Erro ao registrar: ${insertError.message}` });
-    }
-
-    const subjectError = await saveTeacherSubjects(uid, finalSchoolId, subjects);
-    if (subjectError) {
-      console.error('[REGISTER] Could not save teacher subjects:', subjectError);
-      const friendlyMessage = subjectError.message?.includes('foreign key') || subjectError.message?.includes('school_id')
-        ? 'Escola inválida. Crie ou selecione uma escola antes de continuar.'
-        : `Erro ao salvar matérias: ${subjectError.message}`;
-      return res.status(400).json({ error: friendlyMessage });
     }
 
     const { data: sessionData, error: sessionError } = await supabaseAuth.auth.signInWithPassword({ email, password });
@@ -1024,16 +1014,6 @@ app.get('/api/schools', async (req, res) => {
   const { data, error } = await supabase.from('schools').select('*').order('name', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar escolas' });
   res.json(data);
-});
-
-app.get('/api/schools/public', async (_req, res) => {
-  const { data, error } = await supabase
-    .from('schools')
-    .select('id,name')
-    .order('name', { ascending: true });
-
-  if (error) return res.status(500).json({ error: 'Erro ao buscar escolas disponíveis.' });
-  res.json(data || []);
 });
 
 app.post('/api/schools', async (req, res) => {
