@@ -403,7 +403,7 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
   let subTitleSize = "text-[9.5px]";
   let thSize = "text-[9px]";
   let tdSize = "text-[10px]";
-  let rowClass = "h-8";
+  let rowClass = "h-9";
 
   if (reportCardSize === 'small') {
     cardStyle = "font-size: 8.5px; padding: 0.5rem;";
@@ -439,15 +439,15 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
   const anosSuffix = distinctAnos.length ? ` (${distinctAnos.join(', ')})` : '';
 
   return `
-    <div class="bg-white border border-slate-300 rounded-lg text-slate-800 shadow-sm flex flex-col justify-between break-inside-avoid text-xs w-full" style="${cardStyle}">
-      <div class="border-b border-slate-300 pb-1 mb-1.5 flex flex-wrap justify-between items-center gap-x-2 bg-slate-100 px-2 py-1 rounded">
-        <span class="font-extrabold uppercase text-slate-900 whitespace-normal break-words ${headerSize}">${teacher.displayName}${anosSuffix}</span>
-        <span title="${teacher.subject || 'Professor'}" class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight whitespace-normal break-words">${abbreviateReportSubject(teacher.subject || 'Professor')}</span>
+    <div class="bg-white border border-[#cbd5e1] rounded-md text-slate-800 shadow-none flex flex-col justify-between break-inside-avoid text-xs w-full min-h-[285px]" style="${cardStyle}">
+      <div class="mb-1.5 flex flex-wrap justify-between items-center gap-x-2 gap-y-0.5 bg-slate-100 px-2 py-1.5 rounded-sm">
+        <span class="min-w-0 flex-1 font-extrabold uppercase text-slate-900 whitespace-normal break-words ${headerSize}">${teacher.displayName}${anosSuffix}</span>
+        <span title="${teacher.subject || 'Professor'}" class="shrink-0 ${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight whitespace-normal break-words">${abbreviateReportSubject(teacher.subject || 'Professor')}</span>
       </div>
       <table class="w-full text-center border-collapse table-fixed">
         <thead>
           <tr class="border-b border-slate-200">
-            <th class="font-semibold text-slate-400 ${thSize} py-0.5 text-left w-[40px]">Hor</th>
+            <th class="font-semibold text-[#5B99C2] ${thSize} py-0.5 text-left w-[40px]">Hor</th>
             ${days.map(day => `<th class="font-bold text-slate-700 ${thSize} py-0.5">${day}</th>`).join('')}
           </tr>
         </thead>
@@ -545,15 +545,15 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
   }
   
   return `
-    <div class="bg-white border border-slate-300 rounded-lg text-slate-800 shadow-sm flex flex-col justify-between break-inside-avoid text-xs w-full" style="${cardStyle}">
-      <div class="border-b border-slate-300 pb-1 mb-1.5 flex flex-wrap justify-between items-center gap-x-2 bg-slate-100 px-2 py-1 rounded">
+    <div class="bg-white border border-[#cbd5e1] rounded-md text-slate-800 shadow-none flex flex-col justify-between break-inside-avoid text-xs w-full min-h-[285px]" style="${cardStyle}">
+      <div class="mb-1.5 flex flex-wrap justify-between items-center gap-x-2 bg-slate-100 px-2 py-1.5 rounded-sm">
         <span class="font-extrabold uppercase text-slate-900 truncate ${headerSize}">Turma: ${turmaName}</span>
         <span class="${subTitleSize} text-[#5B99C2] font-extrabold uppercase tracking-tight">GRADE HORÁRIA</span>
       </div>
       <table class="w-full text-center border-collapse table-fixed">
         <thead>
           <tr class="border-b border-slate-200">
-            <th class="font-semibold text-slate-400 ${thSize} py-0.5 text-left w-[40px]">Hor</th>
+            <th class="font-semibold text-[#5B99C2] ${thSize} py-0.5 text-left w-[40px]">Hor</th>
             ${days.map(day => `<th class="font-bold text-slate-700 ${thSize} py-0.5">${day}</th>`).join('')}
           </tr>
         </thead>
@@ -2230,7 +2230,7 @@ const RelatoriosTab = () => {
   if (reportCardSize === 'small') {
     gridColsClass = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 print:grid-cols-5 print:gap-1 justify-center";
   } else if (reportCardSize === 'medium') {
-    gridColsClass = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3.5 print:grid-cols-4 print:gap-2 justify-center";
+    gridColsClass = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 print:grid-cols-3 print:gap-3 justify-center";
   } else if (reportCardSize === 'large') {
     gridColsClass = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 print:grid-cols-3 print:gap-3 justify-center";
   } else if (reportCardSize === 'esticado') {
@@ -3485,7 +3485,7 @@ const actions = {
     // Determine how many items per page
     const itemsPerPageMap = {
       small: 8,
-      medium: 4,
+      medium: 6,
       large: 3,
       esticado: 2,
       super_esticado: 1
@@ -3510,7 +3510,7 @@ const actions = {
     if (reportCardSize === 'small') {
       gridColsClass = "grid grid-cols-4 gap-2 justify-center w-full";
     } else if (reportCardSize === 'medium') {
-      gridColsClass = "grid grid-cols-2 gap-4 justify-center w-full";
+      gridColsClass = "grid grid-cols-3 gap-3 justify-center w-full";
     } else if (reportCardSize === 'large') {
       gridColsClass = "grid grid-cols-3 gap-4 justify-center w-full";
     } else if (reportCardSize === 'esticado') {
