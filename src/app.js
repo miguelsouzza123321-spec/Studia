@@ -2827,11 +2827,14 @@ const actions = {
 
     if (!emailInput || !passwordInput || !nameInput) return;
 
-    const email = emailInput.value;
+    const email = emailInput.value.trim();
     const password = passwordInput.value;
-    const displayName = nameInput.value;
+    const displayName = nameInput.value.trim();
 
     if (!email || !password || !displayName) return showDialog('Por favor, preencha todos os campos.');
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return showDialog('E-mail inválido. Use um endereço válido.');
 
     try {
       user = await api.post('/api/auth/register', { email, password, displayName });
@@ -3722,7 +3725,7 @@ const actions = {
 
     // Validação de e-mail simples
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return showDialog('E-mail inválido.');
+    if (!emailRegex.test(email)) return showDialog('E-mail inválido. Use um endereço válido.');
 
     try {
       const payload = {

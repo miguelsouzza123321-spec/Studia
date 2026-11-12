@@ -65,6 +65,11 @@ const sanitizeEmail = (email: string): string => {
   return email.trim().toLowerCase();
 };
 
+const isValidEmail = (email: string): boolean => {
+  if (!email) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+};
+
 const normalizeSubjects = (subject: unknown): string[] => {
   const entries = Array.isArray(subject) ? subject : [subject];
   const subjects = entries
@@ -244,6 +249,9 @@ app.post('/api/auth/register', async (req, res) => {
     // Validação de campos obrigatórios
     if (!email || !password || !displayName) {
       return res.status(400).json({ error: 'Email, senha e nome são obrigatórios' });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: 'E-mail inválido. Use um endereço de e-mail válido.' });
     }
 
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
