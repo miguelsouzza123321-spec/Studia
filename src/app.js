@@ -465,20 +465,20 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
       <table class="w-full text-center border-collapse table-fixed">
         <thead>
           <tr class="border-b border-slate-200">
-            <th class="font-semibold text-[#5B99C2] ${thSize} py-0.5 text-left w-[40px]">Hor</th>
-            ${days.map(day => `<th class="font-bold text-slate-700 ${thSize} py-0.5">${day}</th>`).join('')}
+            <th class="border border-slate-300 font-semibold text-[#5B99C2] ${thSize} py-0.5 px-1 text-left w-[48px]">Hor</th>
+            ${days.map(day => `<th class="border border-slate-300 font-bold text-slate-700 ${thSize} py-0.5 px-1">${day}</th>`).join('')}
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
           ${slots.map(slot => `
             <tr class="${rowClass}">
-              <td class="font-extrabold text-[#2E5077] ${thSize} text-left py-0.5">${slot}</td>
+              <td class="border border-slate-300 font-extrabold text-[#2E5077] ${thSize} text-left py-0.5 px-1">${slot}</td>
               ${days.map(day => {
                 const val = grid[slot][day];
                 const isClass = val !== '------';
                 const isHAF = val === 'HAF';
                 const cellClass = isHAF ? 'text-[#5B99C2] font-black' : (isClass ? 'text-slate-900 font-black' : 'text-slate-400');
-                return `<td title="${val}" class="${tdSize} py-0.5 whitespace-normal break-words ${cellClass}">${val.split('/').map(abbreviateReportEntry).join('/')}</td>`;
+                return `<td title="${val}" class="border border-slate-300 ${tdSize} py-0.5 px-1 whitespace-normal break-words ${cellClass}">${val.split('/').map(abbreviateReportEntry).join(' / ')}</td>`;
               }).join('')}
             </tr>
           `).join('')}
@@ -571,29 +571,29 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
       <table class="w-full text-center border-collapse table-fixed">
         <thead>
           <tr class="border-b border-slate-200">
-            <th class="font-semibold text-[#5B99C2] ${thSize} py-0.5 text-left w-[40px]">Hor</th>
-            ${days.map(day => `<th class="font-bold text-slate-700 ${thSize} py-0.5">${day}</th>`).join('')}
+            <th class="border border-slate-300 font-semibold text-[#5B99C2] ${thSize} py-0.5 px-1 text-left w-[48px]">Hor</th>
+            ${days.map(day => `<th class="border border-slate-300 font-bold text-slate-700 ${thSize} py-0.5 px-1">${day}</th>`).join('')}
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
           ${slots.map(slot => `
             <tr class="${rowClass}">
-              <td class="font-extrabold text-[#2E5077] ${thSize} text-left py-0.5 align-middle">${slot}</td>
+              <td class="border border-slate-300 font-extrabold text-[#2E5077] ${thSize} text-left py-0.5 px-1 align-middle">${slot}</td>
               ${days.map(day => {
                 const cell = grid[slot][day];
                 if (!cell) {
-                  return `<td class="text-slate-300 ${tdTitleSize} py-0.5 align-middle">------</td>`;
+                  return `<td class="border border-slate-300 text-slate-300 ${tdTitleSize} py-0.5 px-1 align-middle">------</td>`;
                 }
                 const isHAF = cell.subject?.toUpperCase() === 'HAF';
                 if (isHAF) {
                   return `
-                    <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
+                    <td class="border border-slate-300 py-0.5 px-1 align-middle leading-tight whitespace-normal break-words">
                       <div class="font-black text-[#5B99C2] ${tdTitleSize}">HAF</div>
                     </td>
                   `;
                 }
                 return `
-                  <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
+                  <td class="border border-slate-300 py-0.5 px-1 align-middle leading-tight whitespace-normal break-words">
                     <div class="font-black text-slate-900 whitespace-normal break-words ${tdTitleSize}">${cell.teacherName}</div>
                     <div title="${cell.subject}" class="text-slate-400 font-extrabold whitespace-normal break-words uppercase mt-0.5 ${tdSubSize}">${abbreviateReportSubject(cell.subject)}</div>
                   </td>
@@ -2244,11 +2244,11 @@ const RelatoriosTab = () => {
   }
 
   // Dynamic Grid classes based on card size selection
-  let gridColsClass = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5 print:grid-cols-4 print:gap-2 justify-center";
+  let gridColsClass = "grid grid-cols-1 sm:grid-cols-2 gap-3.5 print:grid-cols-2 print:gap-3 justify-center";
   if (reportCardSize === 'small') {
     gridColsClass = "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 print:grid-cols-5 print:gap-1 justify-center";
   } else if (reportCardSize === 'medium') {
-    gridColsClass = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 print:grid-cols-3 print:gap-3 justify-center";
+    gridColsClass = "grid grid-cols-1 sm:grid-cols-2 gap-3.5 print:grid-cols-2 print:gap-3 justify-center";
   } else if (reportCardSize === 'large') {
     gridColsClass = "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 print:grid-cols-3 print:gap-3 justify-center";
   } else if (reportCardSize === 'esticado') {
@@ -3503,7 +3503,7 @@ const actions = {
     // Determine how many items per page
     const itemsPerPageMap = {
       small: 8,
-      medium: 6,
+      medium: 4,
       large: 3,
       esticado: 2,
       super_esticado: 1
@@ -3528,7 +3528,7 @@ const actions = {
     if (reportCardSize === 'small') {
       gridColsClass = "grid grid-cols-4 gap-2 justify-center w-full";
     } else if (reportCardSize === 'medium') {
-      gridColsClass = "grid grid-cols-3 gap-3 justify-center w-full";
+      gridColsClass = "grid grid-cols-2 gap-4 justify-center w-full";
     } else if (reportCardSize === 'large') {
       gridColsClass = "grid grid-cols-3 gap-4 justify-center w-full";
     } else if (reportCardSize === 'esticado') {
