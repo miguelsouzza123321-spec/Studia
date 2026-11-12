@@ -75,6 +75,41 @@ const normalizeSubjects = (subject: unknown): string[] => {
   return [...new Map(subjects.map(entry => [entry.toLocaleLowerCase(), entry])).values()];
 };
 
+const ensureDefaultSchoolExists = async (requestedSchoolId?: string | null): Promise<string> => {
+  const schoolId = requestedSchoolId || DEFAULT_SCHOOL_ID;
+
+  const { data: existingSchool, error: lookupError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('id', schoolId)
+    .maybeSingle();
+
+  if (lookupError) throw lookupError;
+  if (existingSchool) return existingSchool.id;
+
+  if (requestedSchoolId && requestedSchoolId !== DEFAULT_SCHOOL_ID) {
+    throw new Error('Escola inválida. Crie ou selecione uma escola antes de continuar.');
+  }
+
+  const { data: defaultSchoolByName, error: nameLookupError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('name', 'Escola Padrão')
+    .maybeSingle();
+
+  if (nameLookupError) throw nameLookupError;
+  if (defaultSchoolByName) return defaultSchoolByName.id;
+
+  const { data: createdSchool, error: createError } = await supabase
+    .from('schools')
+    .upsert({ id: DEFAULT_SCHOOL_ID, name: 'Escola Padrão' }, { onConflict: 'id' })
+    .select('id')
+    .single();
+
+  if (createError) throw createError;
+  return createdSchool.id;
+};
+
 const getOrCreateSchoolSubject = async (schoolId: string, subject: string) => {
   const { data: existingSubjects, error: findError } = await supabase
     .from('school_subjects')
@@ -229,50 +264,25 @@ app.post('/api/auth/register', async (req, res) => {
 
     const uid = authData.user.id;
     const finalRole = 'teacher';
-    const finalSchoolId = school_id || DEFAULT_SCHOOL_ID;
+    const finalSchoolId = await ensureDefaultSchoolExists(school_id);
 
-    console.log('[REGISTER] Step 2: Creating user (without school_id)...');
-
-    // Insert SEM school_id para evitar cache
-    const insertResponse = await fetch(`${supabaseUrl}/rest/v1/users?select=*`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseServiceRoleKey,
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Prefer': 'return=representation'
-      },
-      body: JSON.stringify({
+    const { data: userData, error: insertError } = await supabase
+      .from('users')
+      .insert({
         uid,
         email,
         displayname: displayName,
         role: finalRole,
-        subject: subject || null
+        subject: subject || null,
+        school_id: finalSchoolId
       })
-    });
-
-    const insertText = await insertResponse.text();
-    console.log('[REGISTER] Insert status:', insertResponse.status, 'body:', insertText);
-
-    if (!insertResponse.ok) {
-      console.error('[REGISTER] Insert failed');
-      await supabase.auth.admin.deleteUser(uid);
-      return res.status(500).json({ error: `Erro ao registrar: ${insertText}` });
-    }
-
-    console.log('[REGISTER] Step 3: Updating with school_id via client...');
-    const { data: userData, error: updateError } = await supabase
-      .from('users')
-      .update({ school_id: finalSchoolId })
-      .eq('uid', uid)
       .select('uid,email,displayname,role,subject,school_id')
       .single();
 
-    console.log('[REGISTER] Update result:', { userData, updateError });
-
-    if (updateError) {
-      console.error('[REGISTER] Update error:', updateError);
-      return res.status(500).json({ error: `Erro ao atualizar escola: ${updateError.message}` });
+    if (insertError) {
+      console.error('[REGISTER] Insert failed:', insertError);
+      await supabase.auth.admin.deleteUser(uid);
+      return res.status(500).json({ error: `Erro ao registrar: ${insertError.message}` });
     }
 
     const subjectError = await saveTeacherSubjects(uid, finalSchoolId, subjects);
@@ -543,6 +553,16 @@ app.post('/api/schedules', async (req, res) => {
       return res.status(403).json({ error: 'O horário deve pertencer a um professor da sua escola' });
     }
   }
+
+  let finalSchoolId: string | undefined;
+  try {
+    finalSchoolId = userInfo.role === 'diretor'
+      ? userInfo.school_id
+      : await ensureDefaultSchoolExists(school_id || DEFAULT_SCHOOL_ID);
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : 'Escola inválida' });
+  }
+
   const { data, error } = await supabase.from('schedules').insert({
     date,
     starttime: startTime,
@@ -553,7 +573,7 @@ app.post('/api/schedules', async (req, res) => {
     teachername: teacherName,
     classgroup: classGroup,
     status: 'pending',
-    school_id: userInfo.role === 'diretor' ? userInfo.school_id : (school_id || DEFAULT_SCHOOL_ID)
+    school_id: finalSchoolId
   }).select('id').single();
   if (error) return res.status(500).json({ error: 'Erro ao criar horário' });
   res.json({ id: data.id, status: 'success' });
