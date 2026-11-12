@@ -1026,6 +1026,16 @@ app.get('/api/schools', async (req, res) => {
   res.json(data);
 });
 
+app.get('/api/schools/public', async (_req, res) => {
+  const { data, error } = await supabase
+    .from('schools')
+    .select('id,name')
+    .order('name', { ascending: true });
+
+  if (error) return res.status(500).json({ error: 'Erro ao buscar escolas disponíveis.' });
+  res.json(data || []);
+});
+
 app.post('/api/schools', async (req, res) => {
   const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;

@@ -757,6 +757,10 @@ const LandingView = () => `
           ${authMode === 'register' ? `
             <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
             <input type="text" id="auth-subject" placeholder="Matérias (separe por vírgula)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
+            <select id="auth-school" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
+              <option value="">Selecione a escola</option>
+              ${(window.publicSchools || []).map(school => `<option value="${school.id}">${school.name}</option>`).join('')}
+            </select>
           ` : ''}
           <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
           <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
@@ -2582,6 +2586,15 @@ const actions = {
 
   async init() {
     try {
+      if (authMode === 'register' && !window.publicSchools) {
+        try {
+          window.publicSchools = await api.get('/api/schools/public');
+        } catch (err) {
+          console.warn('Não foi possível carregar escolas disponíveis:', err);
+          window.publicSchools = [];
+        }
+      }
+
       if (!user) {
         render(LandingView());
       } else {
@@ -2828,6 +2841,7 @@ const actions = {
     const passwordInput = $('#auth-password');
     const nameInput = $('#auth-name');
     const subjectInput = $('#auth-subject');
+    const schoolInput = $('#auth-school');
 
     if (!emailInput || !passwordInput || !nameInput) return;
 
@@ -2835,12 +2849,14 @@ const actions = {
     const password = passwordInput.value;
     const displayName = nameInput.value;
     const subject = subjectInput ? subjectInput.value : null;
+    const schoolId = schoolInput ? schoolInput.value : null;
 
     if (!email || !password || !displayName) return showDialog('Por favor, preencha todos os campos.');
     if (!subject) return showDialog('Por favor, informe sua matéria.');
+    if (!schoolId) return showDialog('Selecione a escola para continuar.');
 
     try {
-      user = await api.post('/api/auth/register', { email, password, displayName, subject });
+      user = await api.post('/api/auth/register', { email, password, displayName, subject, school_id: schoolId });
       localStorage.setItem('user', JSON.stringify(user));
       authMode = 'closed';
       this.init();
