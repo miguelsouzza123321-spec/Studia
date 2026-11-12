@@ -338,9 +338,27 @@ const abbreviateReportSubject = subject => {
     .replace(/\bprojeto\b/gi, 'Proj.');
 };
 
-const abbreviateReportEntry = entry => entry.split(' - ').map((part, index) => (
-  index === 0 && entry.includes(' - ') ? part : abbreviateReportSubject(part)
-)).join(' - ');
+const formatCompactClassGroup = value => {
+  if (!value) return value;
+
+  const raw = String(value).trim();
+  if (!raw || raw === '------') return raw;
+
+  if (raw.includes('/')) {
+    return raw.split('/').map(item => formatCompactClassGroup(item)).join(' / ');
+  }
+
+  return raw
+    .replace(/\s+/g, ' ')
+    .replace(/^(\d+)([A-Za-zÁÉÍÓÚÀÈÌÒÙÃÕÂÊÎÔÛÇ]+)/u, '$1 $2');
+};
+
+const abbreviateReportEntry = entry => {
+  const formattedEntry = formatCompactClassGroup(entry);
+  return formattedEntry.split(' - ').map((part, index) => (
+    index === 0 && formattedEntry.includes(' - ') ? part : abbreviateReportSubject(part)
+  )).join(' - ');
+};
 
 // Helper function to determine if a start time belongs to a specific turno
 const isSlotsMatchTurno = (startTime, turno) => {
@@ -379,12 +397,12 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
       if (isHAF) {
         cellText = 'HAF';
       } else if (model === 'prof_turma') {
-        cellText = s.classGroup || '------';
+        cellText = formatCompactClassGroup(s.classGroup || '------');
       } else if (model === 'prof_subject') {
         cellText = s.subject || '------';
       } else {
         const isDifferentSubject = s.subject && teacher.subject && s.subject.trim().toLowerCase() !== teacher.subject.trim().toLowerCase();
-        cellText = (s.classGroup && isDifferentSubject) ? `${s.classGroup} - ${s.subject}` : (s.classGroup || s.subject || '------');
+        cellText = (s.classGroup && isDifferentSubject) ? `${formatCompactClassGroup(s.classGroup)} - ${s.subject}` : (formatCompactClassGroup(s.classGroup || s.subject || '------'));
       }
 
       if (grid[startTimeKey][dayName] === '------') {
