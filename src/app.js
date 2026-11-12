@@ -751,12 +751,9 @@ const LandingView = () => `
         </div>
 
         <h3 class="text-2xl font-bold mb-2">${authMode === 'login' ? 'Bem-vindo de volta' : 'Nova conta Studia'}</h3>
-        <p class="text-slate-500 text-sm mb-6 font-medium">${authMode === 'login' ? 'Acesse seu painel.' : 'Crie sua conta de professor.'}</p>
-
         <div class="space-y-4">
           ${authMode === 'register' ? `
             <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
-            <input type="text" id="auth-subject" placeholder="Matérias (separe por vírgula)" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
           ` : ''}
           <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
           <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
@@ -2827,20 +2824,17 @@ const actions = {
     const emailInput = $('#auth-email');
     const passwordInput = $('#auth-password');
     const nameInput = $('#auth-name');
-    const subjectInput = $('#auth-subject');
 
     if (!emailInput || !passwordInput || !nameInput) return;
 
     const email = emailInput.value;
     const password = passwordInput.value;
     const displayName = nameInput.value;
-    const subject = subjectInput ? subjectInput.value : null;
 
     if (!email || !password || !displayName) return showDialog('Por favor, preencha todos os campos.');
-    if (!subject) return showDialog('Por favor, informe sua matéria.');
 
     try {
-      user = await api.post('/api/auth/register', { email, password, displayName, subject });
+      user = await api.post('/api/auth/register', { email, password, displayName });
       localStorage.setItem('user', JSON.stringify(user));
       authMode = 'closed';
       this.init();

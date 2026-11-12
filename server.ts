@@ -229,13 +229,11 @@ app.use('/api', (req, res, next) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
-    let { email, password, displayName, subject } = req.body;
+    let { email, password, displayName } = req.body;
 
     // Sanitizar entrada
     email = sanitizeEmail(email);
     displayName = sanitizeString(displayName);
-    const subjects = normalizeSubjects(subject);
-    subject = subjects.join(', ');
 
     // Rate-limit: máx 3 registros por minuto por IP
     const ip = req.ip || 'unknown';
@@ -252,7 +250,7 @@ app.post('/api/auth/register', async (req, res) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { displayName, role: 'teacher', subject },
+      user_metadata: { displayName, role: 'teacher' },
     });
 
     if (authError || !authData.user) {
@@ -272,7 +270,7 @@ app.post('/api/auth/register', async (req, res) => {
         email,
         displayname: displayName,
         role: finalRole,
-        subject: subject || null,
+        subject: null,
         school_id: null
       })
       .select('uid,email,displayname,role,subject,school_id')
