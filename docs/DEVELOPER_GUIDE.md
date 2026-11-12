@@ -112,13 +112,9 @@ Ver **todas** as aulas de **todas** as escolas.
 
 Ver **todas** as reservas de laboratório.
 
-### Ver Reservas
+Use os filtros para localizar reservas por data, laboratório ou professor. A agenda exibe as próximas reservas e lista os horários em ordem cronológica. Professores podem cancelar as próprias reservas; a direção pode cancelar reservas da escola.
 
-Tabela com:
-- Laboratório (Informática / Química)
-- Professor
-- Data e hora
-- Status
+Ao criar uma reserva, selecione o laboratório, data e intervalo. O sistema rejeita horários inválidos e conflitos com outra reserva do mesmo espaço na escola.
 
 ### Deletar Reserva
 
@@ -126,28 +122,7 @@ Tabela com:
 2. Confirma
 3. Reserva deletada
 
-⚠️ **"Limpar Tabela"** deleta TODAS as reservas — usar com cuidado
-
-## Aba: Atestados
-
-Ver **todos** os atestados médicos.
-
-### Ver Atestados Pendentes
-
-Filtro no topo mostra:
-- Pendente (awaiting aprovação)
-- Aprovado (aulas já marcadas como vaga)
-
-### Aprovar Atestado
-
-1. Encontre atestado pendente
-2. Click **"Aprovar"**
-3. Sistema automaticamente marca as aulas do dia como "Aula Vaga"
-
-### Ver Foto do Atestado
-
-1. Click no atestado
-2. Foto anexada abre em modal
+Os registros históricos de atestados permanecem no banco, mas não podem mais ser enviados, consultados ou aprovados pelo sistema.
 
 ## Aba: Relatórios
 
@@ -190,12 +165,6 @@ Gerar relatórios em PDF.
 4. Click **"Gerar Relatório"**
 5. PDF desce com grade de frequência
 
-### Cenário 4: Aprovar Todos os Atestados
-
-❌ Não há opção de "aprovar em massa"
-
-**Workaround:** Aprovar um por um (há botão para cada)
-
 ## Permissões
 
 ### Desenvolvedor consegue:
@@ -204,7 +173,6 @@ Gerar relatórios em PDF.
 - ✅ Criar/editar/deletar escolas
 - ✅ Criar/editar/deletar aulas
 - ✅ Criar/editar/deletar labs
-- ✅ Aprovar atestados
 - ✅ Gerar relatórios
 
 ### Desenvolvedor NÃO consegue:

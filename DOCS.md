@@ -15,7 +15,7 @@ Navegador                    Express (server.ts)              Supabase
                             └───────────────────────┘
 ```
 
-- **Frontend (`src/app.js`, ~3200 linhas)**: uma única SPA vanilla JS sem framework, sem build de componentes e sem roteador de URL. Todo o app vive em memória em variáveis `let` no topo do arquivo (`user`, `schedules`, `teachers`, `allUsers`, `currentTab`, etc.). Cada "tela" é uma função que retorna uma string HTML (`LandingView`, `AdminView`, `DiretorView`, `TeacherView`, e as abas `HorariosTab`, `LabsTab`, `AtestadosTab`, `UsersTab`, `RelatoriosTab`). `AdminView`/`DiretorView`/`TeacherView` compõem sua sidebar e drawer mobile chamando os helpers compartilhados `Sidebar({...})`/`MobileDrawer({...})` (parametrizados por `theme: 'light'|'dark'`, lista de abas e rótulo de seção) em vez de duplicar essa marcação em cada view. A função `render(html)` substitui `#app.innerHTML` inteiro a cada mudança de estado.
+- **Frontend (`src/app.js`)**: uma única SPA vanilla JS sem framework, sem build de componentes e sem roteador de URL. Todo o app vive em memória em variáveis `let` no topo do arquivo (`user`, `schedules`, `teachers`, `allUsers`, `currentTab`, etc.). Cada "tela" é uma função que retorna uma string HTML (`LandingView`, `DeveloperView`, `DiretorView`, `TeacherView`, e abas como `HorariosTab`, `LabsTab`, `UsersTab` e `RelatoriosTab`). `DeveloperView`/`DiretorView`/`TeacherView` compõem sua sidebar e drawer mobile chamando os helpers compartilhados `Sidebar({...})`/`MobileDrawer({...})` em vez de duplicar essa marcação. A função `render(html)` substitui `#app.innerHTML` inteiro a cada mudança de estado.
 - **Interação**: não há `addEventListener` delegado nem componentes — os próprios templates têm `onclick="actions.algumaCoisa(...)"` inline, e `window.actions` é exposto globalmente (`window.actions = actions`) para que esses atributos funcionem. Toda ação que muda estado termina chamando `this.init()`, que decide qual view renderizar com base em `user` e `currentTab` e re-renderiza a árvore inteira.
 - **Backend (`server.ts`)**: Express expondo rotas `/api/*` que apenas repassam para o Supabase. Existem dois clients Supabase:
   - `supabase` — criado com a **service role key**, usado em quase todas as rotas (acesso administrativo total ao banco e à Auth).
@@ -31,23 +31,21 @@ Hierarquia (topo → base): `admin` (dono da plataforma) → `diretor` (direçã
 
 ### Admin (`AdminView`) — topo da hierarquia
 Sidebar escura, 6 abas (as 5 de `DiretorView` + uma exclusiva):
-- **Visão geral** (`AdminOverviewTab`): cartões com contagem de usuários, horários, reservas de lab e atestados, mais um painel de "infraestrutura" (nomes fixos: Supabase Postgres, Auth + RLS, Express + Vite) e a `apiBaseUrl` atual.
-- **Horários**, **Laboratórios**, **Atestados**, **Relatórios**: mesmo componente/comportamento descrito em `DiretorView` abaixo (`HorariosTab`, `LabsTab`, `AtestadosTab`, `RelatoriosTab` são reaproveitados, não duplicados).
+- **Visão geral**: cartões com contagem de usuários, horários e reservas de laboratório, mais um painel de infraestrutura.
+- **Horários**, **Laboratórios**, **Relatórios**: componentes compartilhados com a visão da direção.
 - **Usuários** (`UsersTab({ viewerRole: 'admin' })`): único lugar que lista **todas** as contas, incluindo outras contas `admin`; o dropdown de perfil oferece as 3 opções (`teacher`/`diretor`/`admin`) — é o único perfil que pode promover alguém a `admin`.
 
 ### Diretor (`DiretorView`) — direção de escola
 Sidebar clara, 5 abas:
 - **Horários** (`HorariosTab`): tabela com todos os horários cadastrados (todas as turmas/professores), com botões de editar e excluir por linha, e botão "Novo Horário" no header.
-- **Laboratórios** (`LabsTab`): igual à visão do professor, mas com botão "Limpar Tabela" que apaga *todas* as reservas de todos os professores.
-- **Atestados** (`AtestadosTab`): lista todos os atestados de todos os professores, com botão "Aprovar e Gerar Aula Vaga" nos pendentes.
+- **Laboratórios** (`LabsTab`): agenda escolar com filtros por data, laboratório e professor; reservas sobrepostas são rejeitadas.
 - **Usuários** (`UsersTab({ viewerRole: 'diretor' })`): lista diretores e professores (contas `admin` ficam ocultas aqui, só aparecem na visão do admin), com exclusão de conta e — via o dropdown de perfil — alteração de cargo entre `teacher`/`diretor` (nunca `admin`; exceto o próprio usuário logado, que não pode trocar o próprio cargo).
 - **Relatórios** (`RelatoriosTab`): geração de grade em PDF (por professor ou por turma) e gráfico de frequência.
 
 ### Professor (`TeacherView`)
 Sidebar com 3 abas:
 - **Meus Horários**: grade semanal só com as aulas do próprio professor (`GET /api/schedules?teacherId=...`), sem edição — só visualização e exportação em PDF individual.
-- **Laboratórios**: mesma tela de reserva dos labs que admin/diretor veem; qualquer professor também pode excluir sua própria reserva e (sem restrição no código) também tem acesso ao botão "Limpar Tabela" completo.
-- **Meus Atestados**: lista os próprios atestados enviados e permite enviar um novo (data, motivo, foto opcional).
+- **Laboratórios**: agenda compartilhada da escola; o professor pode excluir suas próprias reservas.
 
 O cadastro público (`LandingView`) não tem seleção de perfil — todo auto-cadastro cria uma conta `teacher`. Contas `diretor` e `admin` só existem promovendo um usuário já cadastrado via o dropdown de perfil na aba Usuários (ver §9.1 e §5 acima).
 
@@ -71,11 +69,9 @@ Nenhuma rota valida token/sessão do chamador — a API confia em quem fizer a r
 | `GET /api/labs/bookings` | Lista reservas de laboratório. |
 | `POST /api/labs/bookings` | Cria uma reserva (sem checar conflito de horário/sala). |
 | `DELETE /api/labs/bookings/:id` | Exclui uma reserva. |
-| `DELETE /api/labs/bookings-clear-all` | Apaga **todas** as reservas de laboratório. |
-| `GET /api/certificates` | Lista atestados (sem a coluna `imageUrl`, por performance). |
-| `GET /api/certificates/:id/image` | Retorna só o `imageUrl` de um atestado específico. |
-| `POST /api/certificates` | Cria um atestado (`status` fica implícito/pendente por padrão do banco). |
-| `PATCH /api/certificates/:id/approve` | Marca o atestado como `approved` e, em seguida, atualiza todos os horários do mesmo `teacherId` + `date` para `status: 'vaga'`. |
+| `DELETE /api/labs/bookings-clear-all` | Removido; reservas são canceladas individualmente. |
+
+O fluxo e as rotas de atestados foram removidos. A tabela `certificates` permanece somente para conservar registros históricos e não é acessada pela aplicação.
 
 ## 4. Fluxo de autenticação e cargos
 
@@ -86,28 +82,22 @@ Nenhuma rota valida token/sessão do chamador — a API confia em quem fizer a r
 5. **Cargos**: `teacher` (base) → `diretor` → `admin` (topo). O auto-cadastro só cria `teacher`; `diretor` e `admin` só são alcançáveis promovendo uma conta existente pela aba Usuários (`PATCH /api/users/:uid/role`). Quem vê essa ação: um `diretor` só pode promover/rebaixar entre `teacher`/`diretor` (nunca oferece a opção `admin` no dropdown); um `admin` vê as 3 opções. Ninguém pode trocar o próprio cargo (a UI bloqueia). Essa diferenciação de opções é só do lado do cliente — o endpoint em si aceita qualquer valor de `VALID_ROLES` vindo de quem chamar (ver 9.2).
 6. **Nenhuma rota da API verifica o cargo do chamador** — a distinção de permissões é inteiramente do lado do cliente (quais botões aparecem em cada view). Ver limitações (seção 8).
 
-## 5. Atestados (envio, aprovação, homologação)
+## 5. Registros históricos de certificados
 
-- Professor abre o modal "Incluir Atestado Médico" (`CertModal`), preenche data da falta, motivo, e opcionalmente anexa uma foto.
-- A foto é lida no navegador com `FileReader.readAsDataURL` e enviada como uma string base64 (`imageUrl`) dentro do JSON do `POST /api/certificates` — não há upload para um bucket de storage; a imagem inteira fica guardada na coluna `imageUrl` da tabela `certificates`. O limite de corpo do Express é 10MB (`express.json({ limit: '10mb' })`), o que limita indiretamente o tamanho da foto.
-- O atestado nasce com status pendente (não enviado explicitamente pelo frontend — depende do default da coluna no Supabase).
-- Direção vê a lista completa em Atestados (`AtestadosTab`) e, para os pendentes, tem o botão "Aprovar e Gerar Aula Vaga".
-- Ao aprovar (`PATCH /api/certificates/:id/approve`): o status do certificado vira `approved` **e**, na mesma requisição, todos os horários daquele professor (`teacherId`) na mesma data (`date`) viram `status: 'vaga'` — isso é o que a UI chama de "homologação": aprovar o atestado converte automaticamente as aulas do dia em "aula vaga".
-- Visualização da imagem: tanto professor quanto direção podem clicar em "Visualizar Foto"/ícone de olho, que busca `GET /api/certificates/:id/image` (rota separada, porque a listagem geral não traz a imagem) e abre um modal de imagem genérico (`actions.viewImage`).
+A aplicação não oferece envio, consulta ou aprovação de atestados. A tabela `certificates` é mantida apenas para preservar registros antigos; não remover essa tabela ao aplicar a migração de horários.
 
 ## 6. Horários e Laboratórios
 
 ### Horários
 - Só a direção cria/edita/exclui horários (`CreateModal`, `EditModal`, `DeleteConfirmModal`), escolhendo o professor a partir da lista retornada por `/api/teachers`.
-- Status possíveis: `pending` (padrão ao criar), `confirmed`, `absent`, `vaga` (definido manualmente pela direção ou automaticamente pela aprovação de atestado).
+- Status possíveis: `pending` (padrão ao criar), `confirmed` e `absent`. A migração 008 converte os registros antigos `vaga` para `confirmed` e remove esse status.
 - O professor só visualiza os próprios horários, em formato de grade semanal (`TeacherScheduleCard`) calculada a partir do dia da semana de cada `date` e do `startTime`, ou em lista simples (`teacherSchedulesTab`, embora atualmente só a opção `'grid'` exista de fato na UI).
 - A grade tem 3 turnos fixos pré-definidos (`matutino`, `vespertino`, `noturno`) ou detecção automática dos horários usados (`auto`, via `getDetectedSlots`).
 
 ### Laboratórios
 - Dois tipos fixos, fixos no código (não configuráveis pela UI): `info` (Informática) e `chem` (Química).
-- Qualquer usuário autenticado (admin, diretor ou professor) pode reservar um horário em um dos labs (`LabModal` → `POST /api/labs/bookings`), sem nenhuma checagem de conflito com reservas já existentes na mesma data/horário.
-- Exclusão de uma reserva: o dono da reserva, um admin ou um diretor pode excluir (checado no frontend: `user.role === 'admin' || user.role === 'diretor' || b.teacherId === user.uid`).
-- "Limpar Tabela" apaga todas as reservas de uma vez (`DELETE /api/labs/bookings-clear-all`) — o botão aparece sempre que há reservas, para qualquer usuário logado que acesse a aba (ver limitações).
+- Professores e direção podem reservar `info` (Informática) ou `chem` (Química) para sua escola (`LabModal` → `POST /api/labs/bookings`); o servidor valida data, intervalo e conflitos com reservas do mesmo laboratório.
+- A agenda permite filtrar por data, laboratório e professor. Professores podem cancelar as próprias reservas; a direção pode cancelar reservas da escola.
 
 ## 7. Variáveis de ambiente (`.env`)
 
@@ -127,14 +117,14 @@ Adicionalmente, `vite.config.ts` injeta `process.env.GEMINI_API_KEY` como `defin
 - **UI vanilla em vez de React**: apesar de `react`/`@vitejs/plugin-react`/`recharts`/`motion` estarem no `package.json`, nada disso é usado — a interface inteira é `src/app.js` com template strings e `innerHTML`. Qualquer contribuição deve seguir esse padrão em vez de introduzir componentes React soltos.
 - **Sem autenticação real na API**: as rotas Express não verificam token/sessão — qualquer requisição HTTP direta a `/api/*` (sem passar pela UI) tem acesso total, incluindo excluir usuários ou aprovar atestados. Toda a "segurança" de papéis hoje é apenas visual (esconder/mostrar botões no frontend).
 - **CORS totalmente aberto**: `Access-Control-Allow-Origin: *` em todas as rotas.
-- **Imagens de atestado em base64 direto no Postgres**: sem bucket de storage, a imagem inteira vira texto na coluna `imageUrl`; isso infla o tamanho das linhas e das respostas de `GET /api/certificates/:id/image`, e é limitado pelo `express.json({ limit: '10mb' })`.
+- **Dados históricos de certificados**: a tabela continua no banco para preservar registros antigos; o fluxo e os endpoints correspondentes foram removidos.
 - **Sem verificação de conflito de horário**: nem em `/api/schedules`, nem em `/api/labs/bookings` há checagem de sobreposição (dois horários/reservas podem coexistir no mesmo horário/sala/lab).
 - **"Limpar Tabela" de laboratórios é destrutivo e global**: apaga todas as reservas de todos os professores, e o botão fica visível tanto para admin quanto para professor (não há checagem de `user.role` nessa ação, diferente da exclusão individual de reserva).
 - **Sessão sem expiração**: o login não usa token; `localStorage.user` fica válido indefinidamente no navegador até logout manual ou limpeza do storage.
 - **`api_base_url` / detecção de ambiente**: em `localhost` a API aponta sempre para `http://localhost:3000`; no próprio host Render, usa a mesma origem; em outros hosts, aponta para `https://studia-8st9.onrender.com`.
 - **Código morto**: `SlidesTab` (um carrossel de slides institucionais sobre o Studia) e as actions `nextSlide`/`prevSlide`/estado `currentSlide` existem no arquivo mas não são chamados por nenhuma view atual — não aparecem em lugar nenhum da aplicação.
 - **Sem testes e sem lint de código**: não há suíte de testes no repositório; `npm run lint` roda apenas `tsc --noEmit` (checagem de tipos), sem ESLint/Prettier configurados.
-- **Sem migrations**: as tabelas `users`, `schedules`, `lab_bookings`, `certificates` são referenciadas por nome direto no `server.ts`; o schema do banco vive só no painel do Supabase, não há arquivos de migração neste repositório.
+- **Schema do banco**: as tabelas são referenciadas por nome direto no `server.ts`; o schema inicial e as migrações SQL ficam neste repositório e devem ser aplicados no Supabase.
 
 ## 9. Vulnerabilidades conhecidas
 
@@ -152,7 +142,7 @@ O histórico do problema original fica registrado abaixo para referência.
 
 ### 9.2 Nenhuma rota da API verifica o cargo de quem chama
 
-Consequência direta da falta de autenticação descrita na seção 8: mesmo depois de corrigir 9.1, qualquer requisição HTTP direta (sem passar pela UI) a rotas como `PATCH /api/users/:uid/role`, `DELETE /api/users/:uid` ou `PATCH /api/certificates/:id/approve` tem sucesso, independente de quem a fez. Uma correção completa exigiria um mecanismo real de sessão (token) e checagem de `role` no servidor antes de cada operação sensível — hoje isso é só uma limitação estrutural do projeto, não coberta pela correção de 9.1.
+Consequência direta da falta de autenticação descrita na seção 8: mesmo depois de corrigir 9.1, qualquer requisição HTTP direta (sem passar pela UI) a rotas como `PATCH /api/users/:uid/role` ou `DELETE /api/users/:uid` tem sucesso, independente de quem a fez. Uma correção completa exigiria um mecanismo real de sessão (token) e checagem de `role` no servidor antes de cada operação sensível — hoje isso é só uma limitação estrutural do projeto, não coberta pela correção de 9.1.
 
 ### 9.3 Renomeação da hierarquia de cargos (2026-09-10) — ⚠️ pendente migração de dados em produção
 

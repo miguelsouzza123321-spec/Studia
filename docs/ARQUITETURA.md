@@ -49,7 +49,6 @@
 let user = null;           // Usuário logado
 let schedules = [];        // Aulas
 let labBookings = [];      // Reservas de lab
-let certificates = [];     // Atestados
 let teachers = [];         // Professores
 let allUsers = [];         // Todos os usuários
 
@@ -91,12 +90,8 @@ PATCH /api/users/:uid/role   → Altera cargo de usuário
 DELETE /api/users/:uid       → Deleta usuário
 
 GET /api/labs/bookings       → Lista reservas
-POST /api/labs/bookings      → Cria reserva
+POST /api/labs/bookings      → Cria reserva e valida conflitos
 DELETE /api/labs/bookings/:id → Deleta reserva
-
-GET /api/certificates        → Lista atestados
-POST /api/certificates       → Cria atestado
-PATCH /api/certificates/:id/approve → Aprova atestado
 
 GET /api/schools             → Lista escolas (desenvolvedor only)
 POST /api/schools            → Cria escola (desenvolvedor only)
@@ -113,12 +108,13 @@ POST /api/schools            → Cria escola (desenvolvedor only)
 2. `users` — Usuários (uid, email, displayName, role, school_id)
 3. `schedules` — Aulas (id, date, subject, teacherId, status, school_id)
 4. `lab_bookings` — Reservas (id, labId, teacherId, date, school_id)
-5. `certificates` — Atestados (id, teacherId, reason, status, school_id)
+
+`certificates` continua no banco apenas para preservar registros históricos; não há fluxo de produto ou endpoint para atestados.
 
 **Isolamento de Dados:**
 - Desenvolvedor: vê tudo (sem filtro)
 - Diretor: vê apenas `WHERE school_id = :seu_id`
-- Professor: vê apenas suas aulas/atestados (`WHERE teacherId = :seu_uid`)
+- Professor: vê apenas seus horários e as reservas de laboratório da própria escola
 
 ## Fluxo de Login
 
@@ -211,7 +207,6 @@ if (user.role === 'dev') {
 - `schedules(school_id)` — Filtrar aulas por escola
 - `schedules(teacherId)` — Filtrar aulas por professor
 - `lab_bookings(school_id)` — Filtrar reservas por escola
-- `certificates(school_id)` — Filtrar atestados por escola
 
 **Otimizações:**
 - Lazy load de dados (só carrega quando entra em aba)

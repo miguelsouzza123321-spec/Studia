@@ -86,7 +86,7 @@ let stats = { total: 0, confirmed: 0, absent: 0, pending: 0 };
 let currentTab = 'horarios';
 let authMode = 'closed'; // 'login', 'register' or 'closed'
 let labBookings = [];
-let certificates = [];
+let labFilters = { date: '', labId: 'all', teacher: '' };
 let reportWeek = 'all';
 let reportTurno = 'matutino';
 let reportTeacher = 'all';
@@ -371,16 +371,12 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
     // Remove seconds from startTime for grid key lookup (API returns HH:MM:SS but grid keys are HH:MM)
     const startTimeKey = s.startTime?.substring(0, 5) || s.startTime;
     if (dayName && grid[startTimeKey]) {
-      // Show on the grid if the schedule is confirmed or pending, OR if it's already a vacant slot (vaga) or HAF
-      if (s.status !== 'confirmed' && s.status !== 'pending' && s.status !== 'vaga' && s.subject?.toUpperCase() !== 'HAF') {
+      if (s.status !== 'confirmed' && s.status !== 'pending' && s.subject?.toUpperCase() !== 'HAF') {
         return;
       }
       const isHAF = s.subject?.toUpperCase() === 'HAF';
-      const isVaga = s.status === 'vaga';
       let cellText = '------';
-      if (isVaga) {
-        cellText = 'VAGA';
-      } else if (isHAF) {
+      if (isHAF) {
         cellText = 'HAF';
       } else if (model === 'prof_turma') {
         cellText = s.classGroup || '------';
@@ -463,8 +459,7 @@ const TeacherScheduleCard = (teacher, weekSchedules, slots, model = 'prof_turma'
                 const val = grid[slot][day];
                 const isClass = val !== '------';
                 const isHAF = val === 'HAF';
-                const isVaga = val === 'VAGA';
-                const cellClass = isVaga ? 'text-rose-600 font-black' : (isHAF ? 'text-[#5B99C2] font-black' : (isClass ? 'text-slate-900 font-black' : 'text-slate-400'));
+                const cellClass = isHAF ? 'text-[#5B99C2] font-black' : (isClass ? 'text-slate-900 font-black' : 'text-slate-400');
                 return `<td title="${val}" class="${tdSize} py-0.5 whitespace-normal break-words ${cellClass}">${val.split('/').map(abbreviateReportEntry).join('/')}</td>`;
               }).join('')}
             </tr>
@@ -494,8 +489,7 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
     // Remove seconds from startTime for grid key lookup (API returns HH:MM:SS but grid keys are HH:MM)
     const startTimeKey = s.startTime?.substring(0, 5) || s.startTime;
     if (dayName && grid[startTimeKey]) {
-      // Show on the grid if the schedule is confirmed or pending, OR if it's already a vacant slot (vaga) or HAF
-      if (s.status !== 'confirmed' && s.status !== 'pending' && s.status !== 'vaga' && s.subject?.toUpperCase() !== 'HAF') {
+      if (s.status !== 'confirmed' && s.status !== 'pending' && s.subject?.toUpperCase() !== 'HAF') {
         return;
       }
       const teacher = teachers.find(item => item.uid === s.teacherId);
@@ -572,13 +566,6 @@ const TurmaScheduleCard = (turmaName, weekSchedules, slots) => {
                 if (!cell) {
                   return `<td class="text-slate-300 ${tdTitleSize} py-0.5 align-middle">------</td>`;
                 }
-                if (cell.status === 'vaga') {
-                  return `
-                    <td class="py-0.5 align-middle leading-tight whitespace-normal break-words">
-                      <div class="font-black text-rose-600 ${tdTitleSize} font-black">VAGA</div>
-                    </td>
-                  `;
-                }
                 const isHAF = cell.subject?.toUpperCase() === 'HAF';
                 if (isHAF) {
                   return `
@@ -624,7 +611,7 @@ const LandingView = () => `
       </div>
       <div style="display: flex; gap: 2rem; align-items: center;">
         <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Como Funciona</a>
-        <a onclick="document.getElementById('resources').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Recursos</a>
+        <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Recursos</a>
         <a onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">FAQ</a>
         <button onclick="actions.showLoginModal('login')" style="background: #2563eb; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">Acessar Portal</button>
       </div>
@@ -634,109 +621,66 @@ const LandingView = () => `
     <section style="padding-top: 8rem; padding-bottom: 4rem; text-align: center; animation: slideInDown 0.8s ease-out;">
       <div style="max-width: 900px; margin: 0 auto; padding: 0 1rem;">
         <div style="background: rgba(37, 99, 235, 0.1); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 2rem; padding: 0.5rem 1.5rem; display: inline-block; margin-bottom: 2rem;">
-          <span style="color: #06b6d4; font-weight: 600; font-size: 0.85rem;">🚀 Gestão Escolar Inteligente com Zero Aulas Vagas • v2.4 Pro</span>
+          <span style="color: #06b6d4; font-weight: 600; font-size: 0.85rem;">Organização escolar em um só lugar</span>
         </div>
-        <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -1px;">A grade escolar que<br><span style="background: linear-gradient(135deg, #2563eb, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">elimina aulas vagas</span><br>em segundos.</h1>
-        <p style="font-size: 1.25rem; color: #cbd5e1; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">Substituição automática de professores ausentes, gestão de laboratórios em tempo real e controle absoluto para a coordenação pedagógica.</p>
+        <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -1px;">A rotina da escola<br><span style="background: linear-gradient(135deg, #2563eb, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">mais organizada</span><br>e fácil de acompanhar.</h1>
+        <p style="font-size: 1.25rem; color: #cbd5e1; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">Consulte horários, acompanhe as turmas e organize o uso dos laboratórios em uma plataforma simples para professores e direção.</p>
         <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
           <button onclick="actions.showLoginModal('login')" style="background: #2563eb; color: white; border: none; padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 30px rgba(37, 99, 235, 0.3);">🎓 Entrar no Portal da Escola</button>
-          <button onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="background: transparent; color: white; border: 2px solid rgba(255, 255, 255, 0.2); padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s;">Ver Demonstração Interativa</button>
+          <button onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="background: transparent; color: white; border: 2px solid rgba(255, 255, 255, 0.2); padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s;">Conhecer recursos</button>
         </div>
         <div style="display: flex; gap: 3rem; justify-content: center; margin-top: 3rem; flex-wrap: wrap; font-weight: 600; font-size: 0.9rem;">
-          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Pronto para uso imediato</div>
-          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Armazenamento Seguro e Criptografado</div>
-          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> 1 Toque no Celular do Professor</div>
+          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Grade de horários por professor e turma</div>
+          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Reservas de laboratório consultáveis</div>
+          <div style="color: #cbd5e1;"><span style="color: #06b6d4; font-size: 1.5rem; font-weight: 900;">✓</span> Acesso pelo navegador</div>
         </div>
       </div>
     </section>
 
-    <!-- Stats Section -->
+    <!-- Main resources -->
     <section style="background: rgba(15, 23, 42, 0.5); border-top: 1px solid rgba(37, 99, 235, 0.1); border-bottom: 1px solid rgba(37, 99, 235, 0.1); padding: 4rem 2rem; animation: fadeInUp 1s ease-out 0.3s both;">
-      <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem; text-align: center;">
-        <div>
-          <div style="font-size: 2.5rem; font-weight: 900; color: #2563eb;">+120 mil</div>
-          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Aulas Vagas Evitadas</div>
-        </div>
-        <div>
-          <div style="font-size: 2.5rem; font-weight: 900; color: #06b6d4;">99.4%</div>
-          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Taxa de Presença Coberta</div>
-        </div>
-        <div>
-          <div style="font-size: 2.5rem; font-weight: 900; color: #2563eb;">-85%</div>
-          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Tempo da Coordenação</div>
-        </div>
-        <div>
-          <div style="font-size: 2.5rem; font-weight: 900; color: #06b6d4;">42 seg</div>
-          <div style="color: #94a3b8; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.5rem;">Tempo Médio de Substituição</div>
-        </div>
+      <div style="max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 2rem; text-align: center;">
+        <div><div style="font-size: 1.25rem; font-weight: 900; color: #2563eb;">Horários</div><div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem;">Organizados por professor, turma e período</div></div>
+        <div><div style="font-size: 1.25rem; font-weight: 900; color: #06b6d4;">Laboratórios</div><div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem;">Reservas em uma agenda compartilhada da escola</div></div>
+        <div><div style="font-size: 1.25rem; font-weight: 900; color: #2563eb;">Relatórios</div><div style="color: #94a3b8; font-size: 0.9rem; margin-top: 0.5rem;">Grades para consulta e impressão</div></div>
       </div>
     </section>
 
     <!-- Features Section -->
     <section id="features" style="padding: 6rem 2rem; max-width: 1200px; margin: 0 auto;">
       <div style="text-align: center; margin-bottom: 4rem;">
-        <div style="color: #06b6d4; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">FLUXO INTELIGENTE DE PONTA A PONTA</div>
-        <h2 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 1rem;">Como o Studia transforma a rotina da sua escola</h2>
-        <p style="color: #cbd5e1; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">Do cadastro da grade horária até a gestão de imprevistos e emissão de relatórios oficiais em tempo real.</p>
+        <div style="color: #06b6d4; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">RECURSOS PARA A ROTINA ESCOLAR</div>
+        <h2 style="font-size: 2.5rem; font-weight: 900; margin-bottom: 1rem;">Informações claras para cada pessoa da escola</h2>
+        <p style="color: #cbd5e1; font-size: 1.1rem; max-width: 600px; margin: 0 auto;">A direção organiza os dados da escola e cada professor acompanha seus horários e reservas.</p>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
         <div style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.4s both;">
           <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #2563eb, #1e40af); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">⚡</div>
-          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Zero Alunos Ociosos</h3>
-          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Quando ocorre uma falta, o algoritmo Studia cruza os horários livres no mesmo turno e sugere substitutos compatíveis. A coordenação designa com apenas 1 clique.</p>
-          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(37, 99, 235, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Substituição em 42 seg</div>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Grade de horários</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Consulte e organize os horários de aula com professor, matéria, turma, sala e período.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(37, 99, 235, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Visões por professor e turma</div>
         </div>
 
         <div style="background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.5s both;">
           <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #06b6d4, #0891b2); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">🛡️</div>
           <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Espaços Otimizados</h3>
-          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Controle de agendamentos para salas de informática, laboratórios de ciências e quadras esportivas sem sobreposição de turmas.</p>
-          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(6, 182, 212, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Fim dos conflitos de espaço</div>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Consulte reservas por data e laboratório e confira os horários já agendados antes de reservar.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(6, 182, 212, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Consulta de disponibilidade</div>
         </div>
 
         <div style="background: rgba(168, 85, 247, 0.05); border: 1px solid rgba(168, 85, 247, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.6s both;">
           <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #a855f7, #9333ea); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">📊</div>
-          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Visão 360° da Escola</h3>
-          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Um dashboard dinâmico com o mapa de todas as salas ativas simultaneamente, identificando quais professores estão em aula, quais salas estão vazias e as posições ativas.</p>
-          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(168, 85, 247, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Controle visual total</div>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Acesso por perfil</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Direção e professores encontram ferramentas adequadas às suas atividades e permissões.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(168, 85, 247, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Cada perfil vê suas ferramentas</div>
         </div>
 
         <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 1.5rem; padding: 2rem; transition: all 0.3s; animation: slideInUp 0.8s ease-out 0.7s both;">
           <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #ef4444, #dc2626); border-radius: 0.75rem; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 1.5rem; margin-bottom: 1.5rem;">📄</div>
-          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Relatórios Executivos & Impressão A4 Paisagem</h3>
-          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Gere gráficos de assiduidade por docente, taxas de cobertura e exportação em formato padrão A4 Paisagem para quadro de avisos ou arquivo da secretaria.</p>
-          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ PDF pronto para impressão</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Testimonials -->
-    <section style="padding: 6rem 2rem; max-width: 1200px; margin: 0 auto; border-top: 1px solid rgba(37, 99, 235, 0.1);">
-      <div style="text-align: center; margin-bottom: 4rem;">
-        <div style="color: #06b6d4; font-weight: 700; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 1rem;">CASOS DE SUCESSO</div>
-        <h2 style="font-size: 2.5rem; font-weight: 900;">O que dizem os diretores e coordenadores</h2>
-      </div>
-      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 2rem;">
-          <div style="color: #fbbf24; margin-bottom: 1rem;">★★★★★</div>
-          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">"O Studia acabou com o pesadelo das 07h da manhã quando um professor passava mal. Em 30 segundos achamos um substituto e a escola funciona sem tumulto."</p>
-          <p style="color: #fff; font-weight: 600;">Profª Helena Vasconcelos</p>
-          <p style="color: #94a3b8; font-size: 0.9rem;">Diretora Pedagógica • Colégio Santa Cruz</p>
-        </div>
-
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 2rem;">
-          <div style="color: #fbbf24; margin-bottom: 1rem;">★★★★★</div>
-          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">"Os professores adoraram a facilidade de confirmar a presença no celular. A gestão de laboratórios também economizou incontáveis discussões."</p>
-          <p style="color: #fff; font-weight: 600;">Marcos Drummond</p>
-          <p style="color: #94a3b8; font-size: 0.9rem;">Coordenador Geral • Instituto Drummond</p>
-        </div>
-
-        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 1rem; padding: 2rem;">
-          <div style="color: #fbbf24; margin-bottom: 1rem;">★★★★★</div>
-          <p style="color: #cbd5e1; margin-bottom: 1.5rem; font-style: italic;">"A exportação em formato A4 e os relatórios em PDF nos deram total conformidade nas reuniões com os pais e auditórios de ensino."</p>
-          <p style="color: #fff; font-weight: 600;">Cláudia Fontes</p>
-          <p style="color: #94a3b8; font-size: 0.9rem;">Gestora Escolar • Rede Prisma de Ensino</p>
+          <h3 style="font-size: 1.25rem; font-weight: 900; margin-bottom: 0.75rem;">Relatórios e impressão</h3>
+          <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.6;">Gere grades de horários para consultar ou imprimir, com opções de visualização por professor e turma.</p>
+          <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(239, 68, 68, 0.2); color: #06b6d4; font-size: 0.85rem; font-weight: 600;">✓ Exportação de grades em PDF</div>
         </div>
       </div>
     </section>
@@ -749,23 +693,23 @@ const LandingView = () => `
       </div>
       <div style="space-y: 2rem;">
         <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
-          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Como o Studia resolve as aulas vagas tão rápido?</summary>
-          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">O algoritmo analisa em tempo real os horários livres dos professores no mesmo turno e apresenta as melhores opções de compatibilidade. A coordenação clica uma vez e pronto — a informação é enviada ao professor via push notification.</p>
+          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Como consultar os horários da escola?</summary>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Depois de entrar no portal, professores consultam seus horários e a direção pode organizar e visualizar a grade da escola.</p>
         </details>
 
         <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
           <summary style="font-weight: 700; cursor: pointer; color: #fff;">Os dados da minha escola são seguros e privados?</summary>
-          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Sim. Todos os dados são criptografados com segurança de nível institucional e sincronizados em tempo real. O Studia não compartilha informações com terceiros e opera sob rigoroso compliance de privacidade.</p>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">As telas e os dados disponíveis dependem do perfil da conta: professor ou direção pedagógica.</p>
         </details>
 
         <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
           <summary style="font-weight: 700; cursor: pointer; color: #fff;">Os professores precisam instalar algum aplicativo pesado?</summary>
-          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Não. O Studia é acessível 100% via navegador web. Os professores recebem notificações push no celular, mas a plataforma roda perfeitamente em qualquer smartphone moderno sem necessidade de app nativo.</p>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Não. O portal pode ser acessado pelo navegador do computador ou celular.</p>
         </details>
 
         <details style="background: rgba(37, 99, 235, 0.05); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 1rem; padding: 1.5rem; margin-bottom: 1rem; cursor: pointer;">
-          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Como funciona a ativação com PIX e Cartão de Crédito?</summary>
-          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">O Studia oferece planos por escola com pagamento recorrente via PIX ou cartão. Depois da ativação, todo o sistema funciona normalmente com suporte integral da equipe Studia COP.</p>
+          <summary style="font-weight: 700; cursor: pointer; color: #fff;">Como reservar um laboratório?</summary>
+          <p style="color: #cbd5e1; margin-top: 1rem; line-height: 1.6;">Na aba Laboratórios, consulte as reservas da escola por data e espaço. Ao reservar, o sistema verifica se o horário já está ocupado.</p>
         </details>
       </div>
     </section>
@@ -773,7 +717,7 @@ const LandingView = () => `
     <!-- Footer -->
     <footer style="background: rgba(15, 23, 42, 0.8); border-top: 1px solid rgba(37, 99, 235, 0.1); padding: 3rem 2rem; text-align: center; color: #94a3b8;">
       <p>© 2026 Studia SaaS — Todos os direitos reservados.</p>
-      <p style="margin-top: 1rem; font-size: 0.9rem;">Criptografia de nível institucional com sincronização em tempo real.</p>
+      <p style="margin-top: 1rem; font-size: 0.9rem;">Horários, reservas de laboratório e relatórios para a rotina escolar.</p>
     </footer>
 
     <!-- Login/Register Modal -->
@@ -825,7 +769,6 @@ const TeacherView = () => {
     { id: 'horarios', icon: 'calendar', label: 'Meus Horários' },
     { id: 'labs', icon: 'test-tube', label: 'Laboratórios' },
     { id: 'materias', icon: 'book', label: 'Minhas Matérias' },
-    { id: 'atestados', icon: 'file-text', label: 'Meus Atestados' },
   ];
   const teacherProfile = {
     initials: user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'PR',
@@ -844,14 +787,9 @@ const TeacherView = () => {
           <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-toggle-mobile-menu">
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
-          <h2 class="font-bold text-base md:text-lg capitalize">${currentTab === 'horarios' ? 'Meus Horários' : (currentTab === 'labs' ? 'Laboratórios' : (currentTab === 'materias' ? 'Minhas Matérias' : 'Meus Atestados'))}</h2>
+          <h2 class="font-bold text-base md:text-lg capitalize">${currentTab === 'horarios' ? 'Meus Horários' : (currentTab === 'labs' ? 'Laboratórios' : 'Minhas Matérias')}</h2>
         </div>
         <div class="flex gap-2">
-          ${currentTab === 'atestados' ? `
-            <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-md transition-all" id="btn-new-cert">
-                <i data-lucide="file-plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Novo <span class="hidden sm:inline">Atestado</span></span>
-            </button>
-          ` : ''}
           ${currentTab === 'labs' ? `
             <button onclick="actions.showLabModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 md:px-5 py-2 md:py-2.5 rounded-lg font-bold flex items-center gap-1.5 md:gap-2 text-xs md:text-sm shadow-md transition-all" id="btn-teacher-lab-new">
               <i data-lucide="plus" class="w-4 h-4 md:w-5 md:h-5"></i> <span>Reservar Lab</span>
@@ -970,9 +908,9 @@ const TeacherView = () => {
                   </div>
                   <div class="flex flex-col gap-3 w-full sm:w-auto sm:min-w-[200px] shrink-0 print:hidden">
                     <div class="text-center py-2 bg-slate-50 rounded-xl border text-[10px] font-black uppercase tracking-widest ${
-                      s.status === 'confirmed' ? 'text-blue-600' : s.status === 'absent' ? 'text-rose-500' : s.status === 'vaga' ? 'text-rose-600 font-black' : 'text-amber-500'
+                      s.status === 'confirmed' ? 'text-blue-600' : s.status === 'absent' ? 'text-rose-500' : 'text-amber-500'
                     }">
-                      ${s.status === 'vaga' ? 'AULA VAGA' : (s.status === 'confirmed' ? 'Confirmado' : s.status === 'absent' ? 'Ausente' : 'Pendente')}
+                      ${s.status === 'confirmed' ? 'Confirmado' : s.status === 'absent' ? 'Ausente' : 'Pendente'}
                     </div>
                   </div>
                 </div>
@@ -980,76 +918,11 @@ const TeacherView = () => {
             </div>
           `}
         ` : ''}
-        ${currentTab === 'atestados' ? `
-          <div class="space-y-8 animate-fade-in">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-              <div>
-                <h3 class="text-xl md:text-2xl font-black text-slate-900">Seus Atestados Médicos</h3>
-                <p class="text-xs text-slate-500 font-bold">Acompanhe seus atestados enviados e o status de homologação.</p>
-              </div>
-              <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
-                <i data-lucide="plus" class="w-4 h-4"></i> Enviar Novo Atestado
-              </button>
-            </div>
-            
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-              <div class="overflow-x-auto pr-2">
-                <table class="w-full text-left min-w-[700px]">
-                  <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
-                    <tr>
-                      <th class="px-8 py-5">Data da Falta</th>
-                      <th class="px-8 py-4">Motivo</th>
-                      <th class="px-8 py-4">Imagem do Atestado</th>
-                      <th class="px-8 py-4">Status de Aprovação</th>
-                    </tr>
-                  </thead>
-                  <tbody class="divide-y divide-slate-50">
-                    ${(() => {
-                      const myCerts = certificates.filter(c => c.teacherId === user.uid);
-                      if (myCerts.length === 0) {
-                        return `
-                          <tr>
-                            <td colspan="4" class="px-8 py-16 text-center text-slate-400 font-bold text-sm">
-                              Você ainda não enviou nenhum atestado médico.
-                            </td>
-                          </tr>
-                        `;
-                      }
-                      return myCerts.map(c => `
-                        <tr class="hover:bg-slate-50/50 transition-all">
-                          <td class="px-8 py-5 font-bold text-slate-800">${c.date}</td>
-                          <td class="px-8 py-5 text-sm text-slate-600 font-medium">${c.reason}</td>
-                          <td class="px-8 py-5">
-                            ${c.id ? `
-                              <button onclick="actions.viewImageById(${c.id})" class="bg-blue-50 text-blue-600 hover:bg-blue-100 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 border border-blue-100 transition-all cursor-pointer">
-                                <i data-lucide="eye" class="w-4 h-4"></i> Visualizar Foto
-                              </button>
-                            ` : `
-                              <span class="text-slate-400 font-bold text-[10px] uppercase">Sem imagem</span>
-                            `}
-                          </td>
-                          <td class="px-8 py-5">
-                            <span class="text-[10px] font-black uppercase px-3 py-1.5 rounded-full ${
-                              c.status === 'approved' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-amber-50 text-amber-700 border border-amber-100'
-                            }">
-                              ${c.status === 'approved' ? 'Aprovado' : 'Aguardando Aprovação'}
-                            </span>
-                          </td>
-                        </tr>
-                      `).join('');
-                    })()}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        ` : ''}
         ${currentTab === 'materias' ? MateriasTab() : ''}
         ${currentTab === 'labs' ? LabsTab() : ''}
       </div>
     </main>
     
-    ${CertModal()}
   </div>
   `;
 };
@@ -1154,7 +1027,6 @@ const EditModal = () => `
             <option value="pending">Pendente</option>
             <option value="confirmed">Confirmado</option>
             <option value="absent">Falta / Ausente</option>
-            <option value="vaga">Aula Vaga</option>
           </select>
         </div>
         <div class="flex gap-4 pt-4">
@@ -1192,54 +1064,31 @@ const LabModal = () => `
     <div class="bg-white w-full max-w-lg rounded-3xl p-8 relative z-10 shadow-2xl">
       <h3 class="text-2xl font-bold mb-8">Reservar Laboratório</h3>
       <form onsubmit="actions.createLabBooking(event)" class="space-y-4">
-        <select id="lab-type" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
-          <option value="info">Informática</option>
-          <option value="chem">Química</option>
-        </select>
-        <input type="date" id="lab-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+        <p class="text-sm text-slate-500">Confira as reservas da escola na agenda para escolher um horário disponível.</p>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Laboratório</span>
+          <select id="lab-type" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+            <option value="info">Informática</option>
+            <option value="chem">Química</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Data</span>
+          <input type="date" id="lab-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+        </label>
         <div class="grid grid-cols-2 gap-4">
-          <input type="time" id="lab-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
-          <input type="time" id="lab-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+          <label class="block">
+            <span class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Início</span>
+            <input type="time" id="lab-start" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+          </label>
+          <label class="block">
+            <span class="mb-1.5 block text-xs font-bold uppercase text-slate-500">Término</span>
+            <input type="time" id="lab-end" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
+          </label>
         </div>
         <div class="flex gap-4 pt-4">
           <button type="button" onclick="actions.hideLabModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
           <button type="submit" class="flex-1 bg-slate-900 hover:bg-slate-800 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Reservar</button>
-        </div>
-      </form>
-    </div>
-  </div>
-`;
-
-const CertModal = () => `
-  <div id="cert-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideCertModal()"></div>
-    <div class="bg-white w-full max-w-lg rounded-3xl p-8 relative z-10 shadow-2xl">
-      <h3 class="text-2xl font-bold mb-8">Incluir Atestado Médico</h3>
-      <form onsubmit="actions.submitCert(event)" class="space-y-4">
-        <p class="text-xs text-slate-500 font-bold uppercase mb-2">Atenção: Ao aprovar este atestado, as aulas do dia serão marcadas automaticamente como "Aulas Vagas".</p>
-        <input type="date" id="cert-date" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent text-slate-900" required>
-        <textarea id="cert-reason" placeholder="Motivo da ausência" class="w-full bg-slate-50 border border-slate-200 p-2.5 rounded-lg outline-none font-medium text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent min-h-[100px] text-slate-900" required></textarea>
-
-        <div class="space-y-2">
-            <label class="text-[10px] font-black text-slate-400 uppercase">Anexar Foto do Atestado</label>
-            <div class="relative group">
-                <input type="file" id="cert-image" accept="image/*" capture="environment" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" onchange="actions.previewCertImage(event)">
-                <div id="cert-upload-placeholder" class="w-full border-2 border-dashed border-slate-200 rounded-lg p-8 flex flex-col items-center justify-center gap-2 group-hover:border-blue-400 transition-all">
-                    <i data-lucide="camera" class="text-slate-400 group-hover:text-blue-600 transition-all"></i>
-                    <p class="text-sm font-bold text-slate-500">Toque para tirar foto ou selecionar</p>
-                </div>
-            </div>
-            <div id="cert-preview-container" class="hidden relative mt-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-2">
-                <img id="cert-preview-img" class="w-full max-h-64 object-contain rounded-lg mx-auto" />
-                <button type="button" onclick="actions.clearCertImage()" class="absolute top-4 right-4 bg-rose-600 hover:bg-rose-700 text-white p-2 rounded-lg shadow-lg transition-all flex items-center justify-center" title="Remover Imagem">
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </div>
-
-        <div class="flex gap-4 pt-4">
-          <button type="button" onclick="actions.hideCertModal()" class="flex-1 py-2.5 border border-slate-200 rounded-lg font-bold hover:bg-slate-50 transition-all text-slate-700">Cancelar</button>
-          <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold shadow-md transition-all">Enviar</button>
         </div>
       </form>
     </div>
@@ -1328,7 +1177,6 @@ const DeveloperOverviewTab = () => {
   const totalSchedules = schedules.length;
   const totalUsers = allUsers.length;
   const totalLabs = labBookings.length;
-  const totalCertificates = certificates.length;
 
   return `
     <div class="space-y-6">
@@ -1373,7 +1221,7 @@ const DeveloperOverviewTab = () => {
             <i data-lucide="beaker" class="w-4 h-4 text-emerald-600"></i>
           </div>
           <p class="mt-5 text-3xl font-black text-slate-900">${totalLabs}</p>
-          <p class="mt-2 text-sm text-slate-500">Reservas ativas</p>
+          <p class="mt-2 text-sm text-slate-500">Reservas registradas</p>
         </div>
       </div>
 
@@ -1392,10 +1240,6 @@ const DeveloperOverviewTab = () => {
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
               <span class="text-sm font-semibold text-slate-500">API</span>
               <span class="text-sm font-black text-slate-900">Express + Vite</span>
-            </div>
-            <div class="flex justify-between items-center pb-1">
-              <span class="text-sm font-semibold text-slate-500">Atestados</span>
-              <span class="text-sm font-black text-slate-900">${totalCertificates}</span>
             </div>
           </div>
         </div>
@@ -1609,7 +1453,6 @@ const DeveloperDataTab = () => `
           <option value="schools">Escolas</option>
           <option value="schedules">Horários</option>
           <option value="lab_bookings">Reservas de laboratório</option>
-          <option value="certificates">Atestados (sem imagens)</option>
           <option value="school_subjects">Matérias da escola</option>
           <option value="teacher_subjects">Vínculos de matérias</option>
         </select>
@@ -1726,7 +1569,6 @@ const DEVELOPER_NAV_ITEMS = [
 const DIRETOR_NAV_ITEMS = [
   { id: 'horarios', icon: 'calendar', label: 'Horários' },
   { id: 'labs', icon: 'test-tube', label: 'Laboratórios' },
-  { id: 'atestados', icon: 'file-text', label: 'Atestados' },
   { id: 'usuarios', icon: 'users', label: 'Usuários' },
   { id: 'relatorios', icon: 'bar-chart', label: 'Relatórios' },
 ];
@@ -1765,7 +1607,6 @@ const DeveloperView = () => `
     </main>
 
     ${CreateModal()}
-    ${CertModal()}
     ${EditModal()}
     ${DeleteConfirmModal()}
     ${CreateEscolaModal()}
@@ -1806,14 +1647,12 @@ const DiretorView = () => `
       <div class="p-4 md:p-10 flex-1 overflow-y-auto space-y-6 md:space-y-8 print:p-0">
         ${currentTab === 'horarios' ? HorariosTab() : ''}
         ${currentTab === 'labs' ? LabsTab() : ''}
-        ${currentTab === 'atestados' ? AtestadosTab() : ''}
         ${currentTab === 'usuarios' ? UsersTab({ viewerRole: 'diretor' }) : ''}
         ${currentTab === 'relatorios' ? RelatoriosTab() : ''}
       </div>
     </main>
 
     ${CreateModal()}
-    ${CertModal()}
     ${EditModal()}
     ${DeleteConfirmModal()}
     ${CreateUserModal({ viewerRole: 'diretor' })}
@@ -2108,7 +1947,7 @@ const HorariosTab = () => `
       </thead>
       <tbody class="divide-y divide-slate-50">
         ${schedules.map(s => `
-          <tr class="${s.status === 'vaga' ? 'bg-rose-50' : 'hover:bg-slate-50'} transition-all">
+          <tr class="hover:bg-slate-50 transition-all">
             <td class="px-8 py-5 font-bold">${s.subject}</td>
             <td class="px-8 py-5">
               <div class="text-sm font-bold">${s.startTime}</div>
@@ -2122,10 +1961,9 @@ const HorariosTab = () => `
               <div class="flex justify-center">
                 <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full ${
                   s.status === 'confirmed' ? 'bg-blue-100 text-blue-700' : 
-                  s.status === 'vaga' ? 'bg-rose-600 text-white' : 
                   s.status === 'absent' ? 'bg-rose-100 text-rose-700' :
                   'bg-slate-100 text-slate-500'
-                }">${s.status === 'vaga' ? 'AULA VAGA' : s.status}</span>
+                }">${s.status === 'confirmed' ? 'Confirmado' : s.status === 'absent' ? 'Ausente' : 'Pendente'}</span>
               </div>
             </td>
             <td class="px-8 py-5 text-right print:hidden">
@@ -2218,154 +2056,122 @@ const MateriasTab = () => `
   </div>
 `;
 
-const LabsTab = () => `
-  <div class="space-y-8">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h3 class="text-xl md:text-2xl font-black text-slate-900">Agendamento de Laboratórios</h3>
-        <p class="text-xs md:text-sm text-slate-500 font-bold font-sans">Consulte a disponibilidade e reserve os laboratórios do colégio para as suas aulas.</p>
-      </div>
-      <button onclick="actions.showLabModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
-        <i data-lucide="plus" class="w-4 h-4"></i> Reservar Laboratório
-      </button>
-    </div>
+const LabsTab = () => {
+  const sortedBookings = [...labBookings].sort((a, b) =>
+    a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime)
+  );
+  const filteredBookings = sortedBookings.filter(booking =>
+    (!labFilters.date || booking.date === labFilters.date) &&
+    (labFilters.labId === 'all' || booking.labId === labFilters.labId) &&
+    booking.teacherName.toLocaleLowerCase().includes(labFilters.teacher.toLocaleLowerCase())
+  );
+  const today = new Date();
+  const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const formatDate = date => {
+    const [year, month, day] = date.split('-');
+    return `${day}/${month}/${year}`;
+  };
+  const upcomingBookings = sortedBookings.filter(booking => booking.date >= todayString);
 
-    <!-- Quick view of active labs -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-      ${['info', 'chem'].map(type => {
-        const typeBookings = labBookings.filter(b => b.labId === type);
-        return `
-          <div class="bg-white p-6 md:p-8 rounded-[2rem] border shadow-sm">
-            <h4 class="text-lg font-black mb-6 flex items-center gap-2 text-blue-600 uppercase tracking-tighter">
-              <i data-lucide="${type === 'info' ? 'monitor' : 'beaker'}"></i>
-              ${type === 'info' ? 'Informática' : 'Química'}
-            </h4>
-            <div class="space-y-4">
-              ${typeBookings.slice(0, 3).map(b => `
-                <div class="p-4 bg-slate-50 rounded-2xl border flex items-center justify-between">
-                  <div>
-                    <p class="font-bold text-sm text-slate-800">${b.teacherName}</p>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase">${b.date} • ${b.startTime}${b.endTime ? ` - ${b.endTime}` : ''}</p>
-                  </div>
-                </div>
-              `).join('') || '<p class="text-center text-slate-400 font-bold py-8 text-xs">Nenhuma reserva recente</p>'}
-            </div>
-          </div>
-        `;
-      }).join('')}
-    </div>
-
-    <!-- Detailed reservation schema table -->
-    <div class="space-y-4">
+  return `
+    <div class="space-y-6">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h4 class="text-lg font-black text-slate-800">Tabela Geral do Cronograma das Reservas</h4>
-          <p class="text-xs text-slate-500 font-bold">Acompanhe todos os agendamentos cadastrados no sistema.</p>
+          <h3 class="text-xl md:text-2xl font-black text-slate-900">Agenda dos Laboratórios</h3>
+          <p class="text-xs md:text-sm text-slate-500 font-medium">Consulte as reservas da escola, filtre a agenda e escolha um horário livre.</p>
         </div>
-        ${labBookings.length > 0 && user.role === 'dev' ? `
-          <button onclick="actions.clearAllLabBookings()" class="text-rose-600 hover:text-rose-700 font-bold text-xs flex items-center gap-1.5 border border-rose-200 bg-rose-50 hover:bg-rose-100 px-4 py-2 rounded-xl transition-all shadow-sm">
-            <i data-lucide="trash-2" class="w-4 h-4"></i> Limpar Tabela
-          </button>
-        ` : ''}
+        <button onclick="actions.showLabModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
+          <i data-lucide="plus" class="w-4 h-4"></i> Nova reserva
+        </button>
       </div>
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div class="overflow-x-auto pr-2">
-          <table class="w-full text-left min-w-[700px]">
-            <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ${['info', 'chem'].map(type => {
+          const typeBookings = upcomingBookings.filter(booking => booking.labId === type).slice(0, 3);
+          return `
+            <section class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+              <h4 class="font-black text-slate-800 flex items-center gap-2">
+                <i data-lucide="${type === 'info' ? 'monitor' : 'beaker'}" class="w-5 h-5 text-blue-600"></i>
+                ${type === 'info' ? 'Informática' : 'Química'}
+              </h4>
+              <div class="mt-4 space-y-2">
+                ${typeBookings.map(booking => `
+                  <div class="flex justify-between gap-3 rounded-xl bg-slate-50 p-3">
+                    <span class="min-w-0 truncate text-sm font-semibold text-slate-700">${booking.teacherName}</span>
+                    <span class="shrink-0 text-xs font-bold text-slate-500">${formatDate(booking.date)} · ${booking.startTime.slice(0, 5)}–${booking.endTime.slice(0, 5)}</span>
+                  </div>
+                `).join('') || '<p class="py-3 text-sm text-slate-400">Sem reservas futuras.</p>'}
+              </div>
+            </section>
+          `;
+        }).join('')}
+      </div>
+
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div class="border-b border-slate-100 p-5">
+          <div class="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h4 class="font-black text-slate-900">Reservas da escola</h4>
+              <p class="text-sm text-slate-500">${filteredBookings.length} de ${labBookings.length} reservas</p>
+            </div>
+            <div class="grid grid-cols-1 gap-3 pt-3 sm:grid-cols-3 sm:pt-0">
+              <label class="text-xs font-bold text-slate-500">
+                Data
+                <input type="date" value="${labFilters.date}" onchange="actions.setLabFilter('date', this.value)" class="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+              </label>
+              <label class="text-xs font-bold text-slate-500">
+                Laboratório
+                <select onchange="actions.setLabFilter('labId', this.value)" class="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+                  <option value="all" ${labFilters.labId === 'all' ? 'selected' : ''}>Todos</option>
+                  <option value="info" ${labFilters.labId === 'info' ? 'selected' : ''}>Informática</option>
+                  <option value="chem" ${labFilters.labId === 'chem' ? 'selected' : ''}>Química</option>
+                </select>
+              </label>
+              <label class="text-xs font-bold text-slate-500">
+                Professor
+                <input type="search" value="${labFilters.teacher}" onchange="actions.setLabFilter('teacher', this.value)" placeholder="Buscar nome" class="mt-1 block w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700">
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[650px] text-left">
+            <thead class="bg-slate-50 text-[10px] font-black uppercase text-slate-400">
               <tr>
-                <th class="px-8 py-5">Laboratório</th>
-                <th class="px-8 py-5">Professor Responsável</th>
-                <th class="px-8 py-5">Data da Reserva</th>
-                <th class="px-8 py-5">Horário (Início - Fim)</th>
-                <th class="px-8 py-5 text-center">Ações</th>
+                <th class="px-5 py-4">Data</th>
+                <th class="px-5 py-4">Horário</th>
+                <th class="px-5 py-4">Laboratório</th>
+                <th class="px-5 py-4">Responsável</th>
+                <th class="px-5 py-4 text-center">Ação</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-50">
-              ${labBookings.map(b => `
-                <tr class="hover:bg-slate-50/50 transition-all">
-                  <td class="px-8 py-5">
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-bold text-xs ${b.labId === 'info' ? 'bg-indigo-50 text-indigo-700' : 'bg-teal-50 text-teal-700'}">
-                      <i data-lucide="${b.labId === 'info' ? 'monitor' : 'beaker'}" class="w-3 h-3"></i>
-                      ${b.labId === 'info' ? 'Informática' : 'Química'}
-                    </span>
-                  </td>
-                  <td class="px-8 py-5 font-bold text-slate-800">${b.teacherName}</td>
-                  <td class="px-8 py-5 font-medium text-slate-600">${b.date}</td>
-                  <td class="px-8 py-5">
-                    <span class="bg-slate-100 font-mono text-xs font-bold text-slate-700 px-2.5 py-1 rounded-lg">
-                      ${b.startTime} - ${b.endTime || '---'}
-                    </span>
-                  </td>
-                  <td class="px-8 py-5 text-center">
-                    ${(user.role === 'dev' || user.role === 'diretor' || b.teacherId === user.uid) ? `
-                      <button onclick="actions.deleteLabBooking(${b.id})" class="text-slate-300 hover:text-rose-500 transition-all cursor-pointer inline-flex items-center" title="Cancelar Reserva">
-                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+            <tbody class="divide-y divide-slate-100">
+              ${filteredBookings.map(booking => `
+                <tr class="hover:bg-slate-50">
+                  <td class="px-5 py-4 font-semibold text-slate-700">${formatDate(booking.date)}</td>
+                  <td class="px-5 py-4 font-mono text-sm text-slate-600">${booking.startTime.slice(0, 5)}–${booking.endTime.slice(0, 5)}</td>
+                  <td class="px-5 py-4 text-sm font-semibold text-slate-700">${booking.labId === 'info' ? 'Informática' : 'Química'}</td>
+                  <td class="px-5 py-4 text-sm font-semibold text-slate-700">${booking.teacherName}</td>
+                  <td class="px-5 py-4 text-center">
+                    ${user.role === 'diretor' || booking.teacherId === user.uid ? `
+                      <button onclick="actions.deleteLabBooking(${booking.id})" class="inline-flex items-center text-slate-400 hover:text-rose-600" title="Cancelar reserva" aria-label="Cancelar reserva">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
                       </button>
-                    ` : `<span class="text-slate-300 text-xs">-</span>`}
+                    ` : '<span class="text-slate-300">-</span>'}
                   </td>
                 </tr>
-              `).join('')}
-              ${labBookings.length === 0 ? `
-                <tr>
-                  <td colspan="5" class="px-8 py-10 text-center text-slate-400 font-bold text-sm">Nenhum agendamento de laboratório cadastrado até o momento</td>
-                </tr>
-              ` : ''}
+              `).join('') || `
+                <tr><td colspan="5" class="px-5 py-10 text-center text-sm font-medium text-slate-400">
+                  ${labBookings.length ? 'Nenhuma reserva corresponde aos filtros.' : 'Ainda não há reservas para esta escola.'}
+                </td></tr>
+              `}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
-  </div>
-`;
-
-const AtestadosTab = () => `
-  <div class="space-y-8">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <h3 class="text-xl md:text-2xl font-black text-slate-900">Atestados Médicos</h3>
-      <button onclick="actions.showCertModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
-        <i data-lucide="plus" class="w-4 h-4"></i> Incluir Atestado Médico
-      </button>
-    </div>
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div class="overflow-x-auto pr-2">
-        <table class="w-full text-left min-w-[700px]">
-          <thead class="bg-slate-50 text-[10px] font-black text-slate-400 uppercase border-b">
-            <tr>
-              <th class="px-8 py-5">Professor</th>
-              <th class="px-8 py-4">Data da Falta</th>
-              <th class="px-8 py-4">Motivo</th>
-              <th class="px-8 py-4">Imagem</th>
-              <th class="px-8 py-4">Status</th>
-              <th class="px-8 py-4"></th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-50">
-            ${certificates.map(c => `
-              <tr class="hover:bg-slate-50/50 transition-all">
-                <td class="px-8 py-5 font-bold">${c.teacherName}</td>
-                <td class="px-8 py-5 font-bold">${c.date}</td>
-                <td class="px-8 py-5 text-sm">${c.reason}</td>
-                <td class="px-8 py-5">
-                  ${c.id ? `<button onclick="actions.viewImageById(${c.id})" class="bg-blue-50 text-blue-600 p-2 rounded-lg"><i data-lucide="eye" size="16"></i></button>` : '<span class="text-slate-300 text-[10px]">SEM IMAGEM</span>'}
-                </td>
-                <td class="px-8 py-5">
-                  <span class="text-[10px] font-black uppercase px-3 py-1 rounded-full ${
-                    c.status === 'approved' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                  }">${c.status === 'approved' ? 'Aprovado' : 'Pendente'}</span>
-                </td>
-                <td class="px-8 py-5 text-right">
-                  ${c.status === 'pending' ? `<button onclick="actions.approveCert(${c.id})" class="text-blue-600 font-black text-[10px] uppercase tracking-widest hover:underline">Aprovar e Gerar Aula Vaga</button>` : ''}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-`;
-
-
+  `;
+};
 
 const RelatoriosTab = () => {
   // DEBUG LOGS
@@ -2676,26 +2482,26 @@ let currentSlide = 0;
 const slidesContent = [
     {
         title: "Studia",
-        subtitle: "Gestão Escolar Inteligente",
-        content: "Uma plataforma completa para controle de horários, laboratórios e frequência docente.",
+        subtitle: "Organização da rotina escolar",
+        content: "Uma plataforma para consultar horários, organizar laboratórios e acompanhar informações da escola.",
         icon: "book-open"
     },
     {
-        title: "O Problema",
-        subtitle: "Desafios na Gestão de Horários",
-        content: "Aulas vagas imprevistas, dificuldade no controle de laboratórios e burocracia no envio de atestados médicos.",
+        title: "Organização",
+        subtitle: "Informações em um só lugar",
+        content: "Horários difíceis de consultar e reservas de espaços sem uma agenda compartilhada.",
         icon: "alert-circle"
     },
     {
-        title: "Nossa Solução",
-        subtitle: "Automatização e Transparência",
-        content: "Sistema centralizado onde professores confirmam presença e diretores gerenciam a grade em tempo real.",
+        title: "Acesso simples",
+        subtitle: "Cada perfil com suas ferramentas",
+        content: "Professores consultam seus horários e a direção organiza as informações da escola.",
         icon: "check-circle"
     },
     {
         title: "Funcionalidades",
         subtitle: "O que o Studia faz?",
-        content: "• Grade de horários dinâmica\n• Reserva de laboratórios\n• Envio digital de atestados\n• Relatórios automáticos de frequência",
+        content: "• Grades por professor e turma\n• Reservas de laboratórios\n• Relatórios para consulta e impressão",
         icon: "layers"
     },
     {
@@ -2709,8 +2515,8 @@ const slidesContent = [
 // --- ACTIONS ---
 const TAB_ACCESS = {
   dev: ['overview', 'dev_health', 'dev_diagnostics', 'dev_logs', 'dev_audit', 'dev_data', 'escolas', 'usuarios'],
-  diretor: ['horarios', 'labs', 'atestados', 'usuarios', 'relatorios'],
-  teacher: ['horarios', 'labs', 'materias', 'atestados'],
+  diretor: ['horarios', 'labs', 'usuarios', 'relatorios'],
+  teacher: ['horarios', 'labs', 'materias'],
 };
 
 const actions = {
@@ -2884,6 +2690,13 @@ const actions = {
     const modal = $('#lab-modal');
     if (modal) {
       modal.classList.remove('hidden');
+      const today = new Date();
+      const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      const dateInput = $('#lab-date');
+      if (dateInput) {
+        dateInput.min = todayString;
+        dateInput.value = todayString;
+      }
       if (typeof lucide !== 'undefined') lucide.createIcons();
     }
   },
@@ -2891,54 +2704,6 @@ const actions = {
   hideLabModal() {
     const modal = $('#lab-modal');
     if (modal) modal.remove();
-  },
-
-  showCertModal() {
-    const modal = $('#cert-modal');
-    if (modal) modal.classList.remove('hidden');
-  },
-
-  hideCertModal() {
-    const modal = $('#cert-modal');
-    if (modal) {
-      modal.classList.add('hidden');
-      this.clearCertImage();
-      const dateInput = $('#cert-date');
-      if (dateInput) dateInput.value = '';
-      const reasonInput = $('#cert-reason');
-      if (reasonInput) reasonInput.value = '';
-    }
-  },
-
-  previewCertImage(event) {
-    const file = event.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const previewImg = $('#cert-preview-img');
-        const previewContainer = $('#cert-preview-container');
-        const placeholder = $('#cert-upload-placeholder');
-        if (previewImg && previewContainer && placeholder) {
-          previewImg.src = e.target.result;
-          previewContainer.classList.remove('hidden');
-          placeholder.classList.add('hidden');
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  },
-
-  clearCertImage() {
-    const fileInput = $('#cert-image');
-    if (fileInput) fileInput.value = '';
-    const previewImg = $('#cert-preview-img');
-    const previewContainer = $('#cert-preview-container');
-    const placeholder = $('#cert-upload-placeholder');
-    if (previewImg && previewContainer && placeholder) {
-      previewImg.src = '';
-      previewContainer.classList.add('hidden');
-      placeholder.classList.remove('hidden');
-    }
   },
 
   switchTab(tab) {
@@ -2989,7 +2754,6 @@ const actions = {
         schools: ['id', 'name', 'createdAt'],
         schedules: ['id', 'date', 'startTime', 'endTime', 'subject', 'room', 'teacherId', 'teacherName', 'classGroup', 'status', 'school_id'],
         lab_bookings: ['id', 'labId', 'teacherId', 'teacherName', 'date', 'startTime', 'endTime'],
-        certificates: ['id', 'teacherId', 'teacherName', 'date', 'reason', 'status', 'createdAt'],
         school_subjects: ['id', 'school_id', 'subject'],
         teacher_subjects: ['id', 'teacher_id', 'subject_id']
       };
@@ -3141,11 +2905,10 @@ const actions = {
           api.get('/api/teachers'),
           api.get('/api/users'),
           api.get('/api/labs/bookings'),
-          api.get('/api/certificates'),
           api.get('/api/schools'),
           api.get('/api/school-subjects')
         ]);
-        const [s, t, u, lb, c, sc, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, t, u, lb, sc, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         teachers = t || [];
         allUsers = u || [];
@@ -3161,17 +2924,15 @@ const actions = {
           pending: schedules.filter(item => item.status === 'pending').length,
         };
         labBookings = lb || [];
-        certificates = c || [];
       } else if (user.role === 'diretor') {
         const results = await Promise.allSettled([
           api.get(`/api/schedules?schoolId=${user.school_id}`),
           api.get('/api/teachers'),
           api.get(`/api/users?schoolId=${user.school_id}`),
           api.get('/api/labs/bookings'),
-          api.get('/api/certificates'),
           api.get('/api/school-subjects')
         ]);
-        const [s, t, u, lb, c, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, t, u, lb, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         teachers = t || [];
         allUsers = u || [];
@@ -3183,21 +2944,18 @@ const actions = {
           pending: schedules.filter(item => item.status === 'pending').length,
         };
         labBookings = lb || [];
-        certificates = c || [];
       } else {
         const results = await Promise.allSettled([
           api.get(`/api/schedules?teacherId=${user.uid}`),
           api.get('/api/labs/bookings'),
-          api.get('/api/certificates'),
           api.get(`/api/teachers/${user.uid}/subjects`),
           api.get('/api/school-subjects')
         ]);
-        const [s, lb, c, m, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
+        const [s, lb, m, subs] = results.map((r, i) => r.status === 'fulfilled' ? r.value : (console.error(`Data fetch #${i} failed:`, r.reason), []));
         schedules = this.normalizeSchedules(s || []);
         allUsers = [];
         schoolSubjects = subs || [];
         labBookings = lb || [];
-        certificates = c || [];
         window.teacherSubjects = m || [];
       }
     } catch (err) {
@@ -3489,19 +3247,36 @@ const actions = {
     e.preventDefault();
     const data = {
       labId: $('#lab-type').value,
-      teacherId: user.uid,
-      teacherName: user.displayName,
       date: $('#lab-date').value,
       startTime: $('#lab-start').value,
       endTime: $('#lab-end').value
     };
+    if (data.startTime >= data.endTime) {
+      showDialog('O horário de término precisa ser depois do horário de início.');
+      return;
+    }
+    const hasConflict = labBookings.some(booking =>
+      booking.labId === data.labId &&
+      booking.date === data.date &&
+      data.startTime < booking.endTime.slice(0, 5) &&
+      data.endTime > booking.startTime.slice(0, 5)
+    );
+    if (hasConflict) {
+      showDialog('Este laboratório já está reservado em parte ou em todo esse horário.');
+      return;
+    }
     try {
       await api.post('/api/labs/bookings', data);
       this.hideLabModal();
       this.init();
     } catch (err) {
-      showDialog('Erro ao reservar.');
+      showDialog(err.message || 'Não foi possível criar a reserva.');
     }
+  },
+
+  setLabFilter(filter, value) {
+    labFilters = { ...labFilters, [filter]: value };
+    this.renderCurrentView();
   },
 
   async deleteLabBooking(id) {
@@ -3516,85 +3291,6 @@ const actions = {
     }
   },
 
-  async clearAllLabBookings() {
-    if (await showDialog('Deseja realmente apagar todos os agendamentos de laboratórios? Esta ação limpará a tabela por completo.', { confirm: true, title: 'Limpar reservas' })) {
-      try {
-        await api.delete('/api/labs/bookings-clear-all');
-        await this.refreshData();
-        this.init();
-      } catch (err) {
-        showDialog('Erro ao apagar agendamentos da tabela.');
-      }
-    }
-  },
-
-  async submitCert(e) {
-    e.preventDefault();
-    const fileInput = $('#cert-image');
-    let imageUrl = null;
-
-    if (fileInput && fileInput.files[0]) {
-        try {
-            imageUrl = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(fileInput.files[0]);
-            });
-        } catch (err) {
-            console.error("File upload error:", err);
-        }
-    }
-
-    const data = {
-      teacherId: user.uid,
-      teacherName: user.displayName,
-      date: $('#cert-date').value,
-      reason: $('#cert-reason').value,
-      imageUrl: imageUrl
-    };
-
-    try {
-      await api.post('/api/certificates', data);
-      this.hideCertModal();
-      showDialog('Atestado enviado com sucesso.');
-      this.init();
-    } catch (err) {
-      showDialog('Erro ao enviar atestado.');
-    }
-  },
-
-  viewImage(url) {
-    const modalId = 'image-viewer-modal';
-    let modal = $(`#${modalId}`);
-    if (!modal) {
-        document.body.insertAdjacentHTML('beforeend', `
-            <div id="${modalId}" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md" onclick="this.classList.add('hidden')">
-                <div class="relative bg-white p-2 rounded-2xl shadow-2xl max-w-4xl max-h-[90vh] overflow-auto" onclick="event.stopPropagation()">
-                    <img id="viewer-img" src="" class="w-full h-auto rounded-xl">
-                    <button class="absolute top-4 right-4 bg-white/10 hover:bg-white/20 p-2 rounded-full text-white backdrop-blur-md" onclick="document.getElementById('${modalId}').classList.add('hidden')">
-                        <i data-lucide="x"></i>
-                    </button>
-                </div>
-            </div>
-        `);
-        modal = $(`#${modalId}`);
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-    const img = modal.querySelector('#viewer-img');
-    img.src = url;
-    modal.classList.remove('hidden');
-  },
-
-  async viewImageById(id) {
-    try {
-      const cert = await api.get(`/api/certificates/${id}/image`);
-      this.viewImage(cert.imageUrl);
-    } catch (error) {
-      showDialog('Este certificado não possui uma imagem disponível.');
-    }
-  },
-
   nextSlide() {
     if (currentSlide < slidesContent.length - 1) {
         currentSlide++;
@@ -3606,17 +3302,6 @@ const actions = {
     if (currentSlide > 0) {
         currentSlide--;
         this.init();
-    }
-  },
-
-  async approveCert(id) {
-    if (await showDialog('Deseja aprovar este atestado? Isso converterá automaticamente os horários deste dia em AULA VAGA.', { confirm: true, title: 'Aprovar atestado' })) {
-      try {
-        await api.patch(`/api/certificates/${id}/approve`, {});
-        this.init();
-      } catch (err) {
-        showDialog('Erro ao aprovar atestado.');
-      }
     }
   },
 

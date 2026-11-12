@@ -136,7 +136,7 @@
 **Login como:** `prof-a1@test.local` / sua senha
 
 - [ ] **6.1** Verificar abas acessíveis
-  - Resultado: Vê apenas 3 abas (horarios, labs, atestados)
+  - Resultado: Vê apenas 3 abas (horarios, labs, materias)
   - NÃO vê: usuários, relatórios, escolas
 
 - [ ] **6.2** Tentar acessar "/api/users" diretamente (teste de segurança)
@@ -194,10 +194,10 @@
   - Diretor B não vê aula
   - Professor A1 vê sua própria aula
 
-- [ ] **8.3** Atestados isolados por escola
-  - Professor A envia atestado
-  - Diretor A vê atestado
-  - Diretor B não vê atestado
+- [ ] **8.3** Reservas de laboratório isoladas por escola
+  - Professor A cria reserva na Escola A
+  - Professor A e Diretor A veem a reserva
+  - Diretor B não vê a reserva
 
 #### Permissões
 

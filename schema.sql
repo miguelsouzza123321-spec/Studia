@@ -1,5 +1,5 @@
 -- Studia Schema
--- This is the base schema. Apply migrations/001 through migrations/007 in order
+-- This is the base schema. Apply migrations/001 through migrations/008 in order
 -- to reach the current multi-school schema and subject catalog model.
 
 -- Users table
@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS schedules (
   teacherId UUID NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
   teacherName TEXT NOT NULL,
   classGroup TEXT,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'absent', 'vaga')),
+  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'absent')),
   updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -43,11 +43,11 @@ CREATE TABLE IF NOT EXISTS lab_bookings (
   teacherId UUID NOT NULL REFERENCES users(uid) ON DELETE CASCADE,
   teacherName TEXT NOT NULL,
   date TEXT NOT NULL,
-  startTime TEXT NOT NULL,
-  endTime TEXT NOT NULL
+  startTime TIME NOT NULL,
+  endTime TIME NOT NULL
 );
 
--- Certificates table (atestados médicos)
+-- Legacy storage retained for existing certificate records; the feature and API are disabled.
 CREATE TABLE IF NOT EXISTS certificates (
   id BIGSERIAL PRIMARY KEY,
   teacherId UUID NOT NULL REFERENCES users(uid) ON DELETE CASCADE,

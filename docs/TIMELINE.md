@@ -12,7 +12,7 @@
 **Status:** Em andamento  
 **O que fazer:**
 - [ ] Criar tabela `schools` (id, name, createdBy, createdAt)
-- [ ] Adicionar `school_id UUID` a: users, schedules, lab_bookings, certificates
+- [ ] Adicionar `school_id UUID` a: users, schedules e lab_bookings (certificates é legado histórico)
 - [ ] Criar índices para performance
 - [ ] Testar queries por school_id
 

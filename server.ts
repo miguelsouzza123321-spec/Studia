@@ -562,6 +562,9 @@ app.post('/api/schedules', async (req, res) => {
 app.patch('/api/schedules/:id', async (req, res) => {
   const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
+  if (req.body.status !== undefined && !['pending', 'confirmed', 'absent'].includes(req.body.status)) {
+    return res.status(400).json({ error: 'Status de horário inválido.' });
+  }
   if (userInfo.role === 'diretor') {
     const { data: schedule, error: findError } = await supabase.from('schedules').select('school_id').eq('id', req.params.id).maybeSingle();
     if (findError) return res.status(500).json({ error: 'Erro ao verificar horário' });
@@ -732,6 +735,7 @@ interface UserInfo {
   uid: string;
   role: AppRole;
   school_id?: string;
+  displayname?: string;
 }
 
 const VALID_ROLES: AppRole[] = ['teacher', 'diretor', 'dev'];
@@ -739,7 +743,7 @@ const VALID_ROLES: AppRole[] = ['teacher', 'diretor', 'dev'];
 const getUserFromDB = async (uid: string): Promise<UserInfo | null> => {
   const { data, error } = await supabase
     .from('users')
-    .select('uid,role,school_id')
+    .select('uid,role,school_id,displayname')
     .eq('uid', uid)
     .maybeSingle();
 
@@ -786,7 +790,7 @@ app.get('/api/dev/diagnostics', async (req, res) => {
   const userInfo = await requireRole(req, res, ['dev']);
   if (!userInfo) return;
 
-  const tables = ['users', 'schools', 'schedules', 'lab_bookings', 'certificates', 'school_subjects', 'teacher_subjects'] as const;
+  const tables = ['users', 'schools', 'schedules', 'lab_bookings', 'school_subjects', 'teacher_subjects'] as const;
   const probes = await Promise.all(tables.map(async table => {
     const startedAt = Date.now();
     const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true });
@@ -852,7 +856,6 @@ app.get('/api/dev/export/:resource', async (req, res) => {
     schools: 'id,name,createdat',
     schedules: 'id,date,starttime,endtime,subject,room,teacherid,teachername,classgroup,status,school_id',
     lab_bookings: 'id,labid,teacherid,teachername,date,starttime,endtime',
-    certificates: 'id,teacherid,teachername,date,reason,status,createdat',
     school_subjects: 'id,school_id,subject',
     teacher_subjects: 'id,teacher_id,subject_id'
   } as const;
@@ -913,179 +916,83 @@ app.patch('/api/users/:uid/role', async (req, res) => {
 });
 
 app.get('/api/labs/bookings', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
+  const userInfo = await requireRole(req, res, ['teacher', 'diretor', 'dev']);
+  if (!userInfo) return;
   let query = supabase.from('lab_bookings').select('*');
-  if (userInfo.role === 'teacher') query = query.eq('teacherid', userInfo.uid);
-  if (userInfo.role === 'diretor') {
-    const { data: schoolTeachers, error: teacherError } = await supabase.from('users').select('uid').eq('role', 'teacher').eq('school_id', userInfo.school_id);
-    if (teacherError) return res.status(500).json({ error: 'Erro ao buscar professores da escola' });
-    query = query.in('teacherid', (schoolTeachers || []).map(teacher => teacher.uid));
+  if (userInfo.role !== 'dev') {
+    if (!userInfo.school_id) return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+    query = query.eq('school_id', userInfo.school_id);
   }
-  const { data, error } = await query.order('date', { ascending: false }).order('starttime', { ascending: true });
+  const { data, error } = await query.order('date', { ascending: true }).order('starttime', { ascending: true });
   if (error) return res.status(500).json({ error: 'Erro ao buscar reservas' });
   res.json(transformKeys(data));
 });
 
 app.post('/api/labs/bookings', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-  const booking = req.body;
-  if (userInfo.role === 'teacher' && booking.teacherId !== userInfo.uid && booking.teacherid !== userInfo.uid) {
-    return res.status(403).json({ error: 'Acesso negado' });
+  const userInfo = await requireRole(req, res, ['teacher', 'diretor']);
+  if (!userInfo) return;
+  const { labId, date, startTime, endTime } = req.body;
+  if (!userInfo.school_id) return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
+  if (!['info', 'chem'].includes(labId) ||
+      typeof date !== 'string' ||
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      Number.isNaN(Date.parse(`${date}T00:00:00.000Z`)) ||
+      new Date(`${date}T00:00:00.000Z`).toISOString().slice(0, 10) !== date ||
+      typeof startTime !== 'string' ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime) ||
+      typeof endTime !== 'string' ||
+      !/^([01]\d|2[0-3]):[0-5]\d$/.test(endTime) ||
+      startTime >= endTime) {
+    return res.status(400).json({ error: 'Informe laboratório, data e intervalo de horário válidos.' });
   }
-  if (userInfo.role === 'diretor') {
-    const teacherId = booking.teacherId || booking.teacherid;
-    const teacher = teacherId ? await getUserFromDB(teacherId) : null;
-    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
-      return res.status(403).json({ error: 'A reserva deve pertencer a um professor da sua escola' });
-    }
-  }
-  const { error } = await supabase.from('lab_bookings').insert(booking);
+
+  const { data: conflict, error: conflictError } = await supabase
+    .from('lab_bookings')
+    .select('id')
+    .eq('school_id', userInfo.school_id)
+    .eq('labid', labId)
+    .eq('date', date)
+    .lt('starttime', endTime)
+    .gt('endtime', startTime)
+    .limit(1)
+    .maybeSingle();
+  if (conflictError) return res.status(500).json({ error: 'Erro ao verificar disponibilidade do laboratório' });
+  if (conflict) return res.status(409).json({ error: 'Este laboratório já está reservado em parte ou em todo esse horário.' });
+
+  const { error } = await supabase.from('lab_bookings').insert({
+    labid: labId,
+    teacherid: userInfo.uid,
+    teachername: userInfo.displayname,
+    date,
+    starttime: startTime,
+    endtime: endTime,
+    school_id: userInfo.school_id
+  });
   if (error) return res.status(500).json({ error: 'Erro ao criar reserva' });
   res.json({ status: 'success' });
 });
 
 app.delete('/api/labs/bookings/:id', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-  if (userInfo.role === 'teacher') {
-    const { data: booking, error: findError } = await supabase.from('lab_bookings').select('teacherid').eq('id', req.params.id).maybeSingle();
-    if (findError) return res.status(500).json({ error: 'Erro ao verificar reserva' });
-    if (!booking || booking.teacherid !== userInfo.uid) return res.status(403).json({ error: 'Acesso negado' });
-  } else if (userInfo.role === 'diretor') {
-    const { data: booking, error: findError } = await supabase.from('lab_bookings').select('teacherid').eq('id', req.params.id).maybeSingle();
-    if (findError) return res.status(500).json({ error: 'Erro ao verificar reserva' });
-    const teacher = booking?.teacherid ? await getUserFromDB(booking.teacherid) : null;
-    if (!teacher || teacher.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
+  const userInfo = await requireRole(req, res, ['teacher', 'diretor', 'dev']);
+  if (!userInfo) return;
+  const { data: booking, error: findError } = await supabase
+    .from('lab_bookings')
+    .select('teacherid,school_id')
+    .eq('id', req.params.id)
+    .maybeSingle();
+  if (findError) return res.status(500).json({ error: 'Erro ao verificar reserva' });
+  if (!booking) return res.status(404).json({ error: 'Reserva não encontrada' });
+  if (userInfo.role === 'teacher' && booking.teacherid !== userInfo.uid) {
+    return res.status(403).json({ error: 'Acesso negado' });
   }
-  const { error } = await supabase.from('lab_bookings').delete().eq('id', req.params.id);
+  if (userInfo.role === 'diretor' && booking.school_id !== userInfo.school_id) {
+    return res.status(403).json({ error: 'Acesso negado' });
+  }
+  let deleteQuery = supabase.from('lab_bookings').delete().eq('id', req.params.id);
+  if (userInfo.role !== 'dev') deleteQuery = deleteQuery.eq('school_id', userInfo.school_id);
+  if (userInfo.role === 'teacher') deleteQuery = deleteQuery.eq('teacherid', userInfo.uid);
+  const { error } = await deleteQuery;
   if (error) return res.status(500).json({ error: 'Erro ao excluir reserva' });
-  res.json({ status: 'success' });
-});
-
-app.delete('/api/labs/bookings-clear-all', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['dev']);
-  if (!userInfo) return;
-  const { error } = await supabase.from('lab_bookings').delete().not('id', 'is', null);
-  if (error) return res.status(500).json({ error: 'Erro ao limpar reservas' });
-  res.json({ status: 'success' });
-});
-
-app.get('/api/certificates', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-  let query = supabase.from('certificates').select('*');
-  if (userInfo.role === 'teacher') query = query.eq('teacherid', userInfo.uid);
-  if (userInfo.role === 'diretor') {
-    const { data: schoolTeachers, error: teacherError } = await supabase.from('users').select('uid').eq('role', 'teacher').eq('school_id', userInfo.school_id);
-    if (teacherError) return res.status(500).json({ error: 'Erro ao buscar professores da escola' });
-    query = query.in('teacherid', (schoolTeachers || []).map(teacher => teacher.uid));
-  }
-  const { data, error } = await query.order('createdat', { ascending: false });
-  if (error) return res.status(500).json({ error: 'Erro ao buscar certificados' });
-  res.json(transformKeys(data));
-});
-
-app.get('/api/certificates/:id/image', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-  const { data, error } = await supabase.from('certificates').select('teacherid,imageUrl').eq('id', req.params.id).maybeSingle();
-  if (error) return res.status(500).json({ error: 'Erro ao buscar imagem' });
-  if (!data) return res.status(404).json({ error: 'Atestado não encontrado' });
-  if (userInfo.role === 'teacher' || userInfo.role === 'diretor') {
-    if (userInfo.role === 'teacher' && data.teacherid !== userInfo.uid) return res.status(403).json({ error: 'Acesso negado' });
-    if (userInfo.role === 'diretor') {
-      const teacher = data.teacherid ? await getUserFromDB(data.teacherid) : null;
-      if (!teacher || teacher.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
-    }
-  }
-  if (!data.imageUrl) return res.status(404).json({ error: 'Imagem não encontrada' });
-  res.json({ imageUrl: data.imageUrl });
-});
-
-app.post('/api/certificates', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-  const certificate = req.body;
-  const teacherId = certificate.teacherId || certificate.teacherid;
-  if (userInfo.role === 'teacher' && teacherId !== userInfo.uid) return res.status(403).json({ error: 'Acesso negado' });
-  if (userInfo.role === 'diretor') {
-    const teacher = teacherId ? await getUserFromDB(teacherId) : null;
-    if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
-      return res.status(403).json({ error: 'O atestado deve pertencer a um professor da sua escola' });
-    }
-  }
-  const { error } = await supabase.from('certificates').insert(req.body);
-  if (error) return res.status(500).json({ error: 'Erro ao criar certificado' });
-  res.json({ status: 'success' });
-});
-
-app.patch('/api/certificates/:id/approve', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['dev', 'diretor']);
-  if (!userInfo) return;
-  const { data: certificate, error: findError } = await supabase.from('certificates').select('teacherid,date').eq('id', req.params.id).maybeSingle();
-  if (findError) return res.status(500).json({ error: 'Erro ao buscar certificado' });
-  if (!certificate) return res.status(404).json({ error: 'Certificado não encontrado' });
-  if (userInfo.role === 'diretor') {
-    const teacher = await getUserFromDB(certificate.teacherid);
-    if (!teacher || teacher.school_id !== userInfo.school_id) return res.status(403).json({ error: 'Acesso negado' });
-  }
-
-  // Aprovar atestado
-  const { error: certError } = await supabase.from('certificates').update({ status: 'approved' }).eq('id', req.params.id);
-  if (certError) return res.status(500).json({ error: 'Erro ao aprovar certificado' });
-
-  // Buscar aula do professor no dia do atestado
-  let teacherScheduleQuery = supabase
-    .from('schedules')
-    .select('*')
-    .eq('teacherid', certificate.teacherid)
-    .eq('date', certificate.date);
-  if (userInfo.role === 'diretor') teacherScheduleQuery = teacherScheduleQuery.eq('school_id', userInfo.school_id);
-  const { data: teacherSchedule, error: schedFindError } = await teacherScheduleQuery.single();
-
-  if (schedFindError && schedFindError.code !== 'PGRST116') {
-    return res.status(500).json({ error: 'Erro ao buscar aula do professor' });
-  }
-
-  if (teacherSchedule) {
-    // Buscar último horário do dia (maior startTime)
-    let lastScheduleQuery = supabase
-      .from('schedules')
-      .select('*')
-      .eq('date', certificate.date)
-      .order('starttime', { ascending: false })
-      .limit(1);
-    if (userInfo.role === 'diretor') lastScheduleQuery = lastScheduleQuery.eq('school_id', userInfo.school_id);
-    const { data: lastSchedule, error: lastError } = await lastScheduleQuery.single();
-
-    if (!lastError && lastSchedule && lastSchedule.id !== teacherSchedule.id) {
-      // Fazer swap: trocar aulas de lugar
-      const tempTeacher = teacherSchedule.teacherid;
-      const tempSubject = teacherSchedule.subject;
-      const tempClassGroup = teacherSchedule.classgroup;
-
-      // Atualizar aula do professor com dados da última aula
-      await supabase.from('schedules').update({
-        teacherid: lastSchedule.teacherid,
-        subject: lastSchedule.subject,
-        classgroup: lastSchedule.classgroup,
-      }).eq('id', teacherSchedule.id);
-
-      // Atualizar última aula com dados do professor
-      await supabase.from('schedules').update({
-        teacherid: tempTeacher,
-        subject: tempSubject,
-        classgroup: tempClassGroup,
-        status: 'vaga',
-      }).eq('id', lastSchedule.id);
-    } else {
-      // Se não houver outra aula ou é a única, apenas marcar como vaga
-      await supabase.from('schedules').update({ status: 'vaga' }).eq('id', teacherSchedule.id);
-    }
-  }
-
   res.json({ status: 'success' });
 });
 
