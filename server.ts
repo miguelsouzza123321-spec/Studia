@@ -259,84 +259,47 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-app.post('/api/auth/register', async (req, res) => {
-  try {
-    let { email, password, displayName } = req.body;
+app.post('/api/auth/register', (_req, res) => {
+  res.status(403).json({ error: 'Cadastro público desativado. Peça à direção pedagógica para criar seu acesso.' });
+});
 
-    // Sanitizar entrada
-    email = sanitizeEmail(email);
-    displayName = sanitizeString(displayName);
+app.get('/api/public/schools', async (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
 
-    // Rate-limit: máx 3 registros por minuto por IP
-    const ip = req.ip || 'unknown';
-    if (!checkRateLimit(`register:${ip}`, 3, 60000)) {
-      return res.status(429).json({ error: 'Muitos registros. Tente novamente mais tarde.' });
-    }
-
-    // Validação de campos obrigatórios
-    if (!email || !password || !displayName) {
-      return res.status(400).json({ error: 'Email, senha e nome são obrigatórios' });
-    }
-    if (!isValidEmail(email)) {
-      return res.status(400).json({ error: 'E-mail inválido. Use um endereço de e-mail válido.' });
-    }
-
-    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { displayName, role: 'teacher' },
-    });
-
-    if (authError || !authData.user) {
-      console.error('Auth error:', authError);
-      return res.status(authError?.status === 422 ? 400 : 500).json({
-        error: authError?.status === 422 ? 'Email já cadastrado' : `Erro ao registrar: ${authError?.message || 'Desconhecido'}`
-      });
-    }
-
-    const uid = authData.user.id;
-    const finalRole = 'teacher';
-
-    const { data: userData, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        uid,
-        email,
-        displayname: displayName,
-        role: finalRole,
-        subject: null,
-        school_id: null
-      })
-      .select('uid,email,displayname,role,subject,school_id')
-      .single();
-
-    if (insertError) {
-      console.error('[REGISTER] Insert failed:', insertError);
-      await supabase.auth.admin.deleteUser(uid);
-      return res.status(500).json({ error: `Erro ao registrar: ${insertError.message}` });
-    }
-
-    const { data: sessionData, error: sessionError } = await supabaseAuth.auth.signInWithPassword({ email, password });
-    if (sessionError || !sessionData.session) {
-      console.error('[REGISTER] Could not create authenticated session:', sessionError);
-      return res.status(500).json({ error: 'Conta criada, mas não foi possível iniciar a sessão. Faça login.' });
-    }
-
-    res.json({
-      ...transformKeys(userData),
-      accessToken: sessionData.session.access_token,
-      refreshToken: sessionData.session.refresh_token
-    });
-  } catch (err) {
-    console.error('Register error:', err);
-    res.status(500).json({ error: 'Erro interno ao registrar' });
+  const ip = req.ip || 'unknown';
+  if (!checkRateLimit(`public-schools:${ip}`, 30, 60000)) {
+    return res.status(429).json({ error: 'Muitas consultas. Tente novamente mais tarde.' });
   }
+
+  const { data, error } = await supabase
+    .from('schools')
+    .select('id,name')
+    .order('name', { ascending: true });
+  if (error) {
+    console.error('[PUBLIC SCHOOLS] Query failed:', error);
+    return res.status(500).json({ error: 'Não foi possível carregar as escolas.' });
+  }
+  res.json(data || []);
 });
 
 app.post('/api/auth/login', async (req, res) => {
   let { email, password } = req.body;
   email = sanitizeEmail(email);
+  const schoolId = typeof req.body.schoolId === 'string' ? req.body.schoolId : '';
+  if (!schoolId) return res.status(400).json({ error: 'Selecione sua escola para continuar.' });
+
+  const { data: selectedSchool, error: schoolError } = await supabase
+    .from('schools')
+    .select('id')
+    .eq('id', schoolId)
+    .maybeSingle();
+  if (schoolError) {
+    console.error('[LOGIN] School validation failed:', schoolError);
+    return res.status(500).json({ error: 'Não foi possível validar a escola selecionada.' });
+  }
+  if (!selectedSchool) return res.status(400).json({ error: 'A escola selecionada não foi encontrada.' });
 
   // Rate-limit: máx 5 tentativas por minuto por email
   if (!checkRateLimit(`login:${email}`, 5, 60000)) {
@@ -346,9 +309,10 @@ app.post('/api/auth/login', async (req, res) => {
   const { data: authData, error: authError } = await supabaseAuth.auth.signInWithPassword({ email, password });
   if (authError || !authData.user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
+  let userData: any = null;
   // Buscar usuário com SQL direto (evita cache do REST API)
   try {
-    const { data: userData, error: userError } = await supabase
+    const { data, error: userError } = await supabase
       .from('users')
       .select('uid,email,displayname,role,subject,school_id')
       .eq('uid', authData.user.id)
@@ -359,20 +323,9 @@ app.post('/api/auth/login', async (req, res) => {
       // Fallback: usar RPC ou SQL direto
       throw new Error(userError.message);
     }
-
-    if (!userData) {
-      console.log('[LOGIN] User not found in DB');
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
-
-    console.log('[LOGIN] User found, role:', userData.role);
-    res.json({
-      ...transformKeys(userData),
-      accessToken: authData.session.access_token,
-      refreshToken: authData.session.refresh_token
-    });
+    userData = data;
   } catch (err) {
-    console.error('[LOGIN] Fallback to fetch:', err.message);
+    console.error('[LOGIN] Fallback to fetch:', err instanceof Error ? err.message : err);
     // Fallback: usar fetch direto sem select=*
     const response = await fetch(`${supabaseUrl}/rest/v1/users?uid=eq.${authData.user.id}`, {
       headers: {
@@ -389,12 +342,27 @@ app.post('/api/auth/login', async (req, res) => {
 
     const data = await response.json();
     if (!data || data.length === 0) return res.status(401).json({ error: 'Credenciais inválidas' });
-    res.json({
-      ...transformKeys(data[0]),
-      accessToken: authData.session.access_token,
-      refreshToken: authData.session.refresh_token
-    });
+    userData = data[0];
   }
+
+  if (!userData) return res.status(401).json({ error: 'Credenciais inválidas' });
+  if (userData.role === 'teacher' || userData.role === 'diretor') {
+    if (!userData.school_id) {
+      return res.status(403).json({ error: 'Sua conta ainda não está vinculada a uma escola. Procure a direção pedagógica ou o desenvolvedor para solicitar o vínculo.' });
+    }
+    if (userData.school_id !== schoolId) {
+      return res.status(401).json({ error: 'Credenciais inválidas' });
+    }
+  } else if (userData.role !== 'dev') {
+    return res.status(401).json({ error: 'Credenciais inválidas' });
+  }
+
+  console.log('[LOGIN] User found, role:', userData.role);
+  res.json({
+    ...transformKeys(userData),
+    accessToken: authData.session.access_token,
+    refreshToken: authData.session.refresh_token
+  });
 });
 
 app.post('/api/auth/refresh', async (req, res) => {

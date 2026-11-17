@@ -46,7 +46,7 @@ Sidebar com 3 abas:
 - **Laboratórios**: agenda compartilhada da escola; o professor pode excluir suas próprias reservas.
 - **Minhas Matérias** (`MateriasTab`): consulta matérias vinculadas e as turmas/quantidade de aulas semanais encontradas nos horários; professores não podem alterar vínculos.
 
-O cadastro público (`LandingView`) não tem seleção de perfil — todo auto-cadastro cria uma conta `teacher`. Contas `diretor` e `admin` só existem promovendo um usuário já cadastrado via o dropdown de perfil na aba Usuários (ver §9.1 e §5 acima).
+O cadastro público está desativado. A direção e o desenvolvedor criam contas pela gestão de usuários; no login, a pessoa seleciona a escola vinculada à conta.
 
 ## 3. Rotas da API (`server.ts`)
 
@@ -57,8 +57,9 @@ Nenhuma rota valida token/sessão do chamador — a API confia em quem fizer a r
 | `GET /api/school-periods` | Lista os períodos cadastrados para a escola da direção autenticada. |
 | `POST /api/school-periods` | Cria ou substitui um período da escola/turno após validar o intervalo e evitar sobreposição. |
 | `PATCH /api/school-periods/:id` / `DELETE /api/school-periods/:id` | Atualiza ou remove um período pertencente à escola da direção. |
-| `POST /api/auth/register` | Cria usuário no Supabase Auth (`admin.createUser`) e depois insere a linha correspondente em `users`. Se a inserção falhar, deleta o usuário de Auth para não deixar órfão. `role` vindo do corpo é ignorado — a conta é sempre criada como `teacher` (ver §9.1). |
-| `POST /api/auth/login` | Autentica com `supabaseAuth.auth.signInWithPassword`, depois busca a linha em `users` pelo `uid` e devolve esse registro (é o que vira `user` no frontend). |
+| `GET /api/public/schools` | Lista em tempo real `id` e `name` das escolas para o login, sem autenticação nem cache e com limite de requisições por IP. |
+| `POST /api/auth/register` | Cadastro público desativado; responde `403`. |
+| `POST /api/auth/login` | Autentica com `supabaseAuth.auth.signInWithPassword`, exige escola e confere o vínculo de professores/diretores; desenvolvedores podem selecionar qualquer escola existente. Retorna os dados do usuário e os tokens de sessão. |
 | `GET /api/schedules` | Lista horários, ordenado por `date` desc e `startTime` asc. Filtra por `?teacherId=`. |
 | `POST /api/schedules` | Cria horário com `status: 'pending'`. |
 | `POST /api/schedules/recurring` | Gera de uma vez as ocorrências para os dias, períodos e datas selecionados, rejeitando o lote inteiro em caso de conflito. |
@@ -82,11 +83,11 @@ O fluxo e as rotas de atestados foram removidos. A tabela `certificates` permane
 
 ## 4. Fluxo de autenticação e cargos
 
-1. **Registro**: o modal de login/registro (`LandingView`) não tem seleção de perfil — todo auto-cadastro é professor. Ao registrar, `POST /api/auth/register` cria o usuário na Auth do Supabase (`email_confirm: true`, sem fluxo de confirmação de e-mail) e a linha em `users` com `role: 'teacher'`.
-2. **Login**: `POST /api/auth/login` retorna a linha da tabela `users` (não um token). O frontend guarda esse objeto inteiro em `localStorage.user` e o usa como estado de sessão em todas as telas.
+1. **Criação de contas**: o cadastro público está desativado. A direção e o desenvolvedor criam usuários pela gestão de usuários.
+2. **Login**: a pessoa escolhe uma escola e envia e-mail/senha a `POST /api/auth/login`. Professores e diretores só entram se o vínculo da conta corresponder à escola escolhida; contas sem escola recebem orientação para solicitar o vínculo. Desenvolvedores podem escolher qualquer escola existente. O frontend guarda em `localStorage.user` os dados da conta e os tokens retornados.
 3. **Persistência de sessão**: ao carregar a página, `app.js` lê `localStorage.getItem('user')` direto para a variável `user` — não há verificação de validade/expiração; a "sessão" nunca expira sozinha.
 4. **Logout**: `actions.logout()` só limpa `localStorage.user` e zera o estado local; não há chamada ao backend nem revogação de nada no Supabase Auth.
-5. **Cargos**: `teacher` (base) → `diretor` → `admin` (topo). O auto-cadastro só cria `teacher`; `diretor` e `admin` só são alcançáveis promovendo uma conta existente pela aba Usuários (`PATCH /api/users/:uid/role`). Quem vê essa ação: um `diretor` só pode promover/rebaixar entre `teacher`/`diretor` (nunca oferece a opção `admin` no dropdown); um `admin` vê as 3 opções. Ninguém pode trocar o próprio cargo (a UI bloqueia). Essa diferenciação de opções é só do lado do cliente — o endpoint em si aceita qualquer valor de `VALID_ROLES` vindo de quem chamar (ver 9.2).
+5. **Cargos**: contas `teacher`, `diretor` e `dev` são criadas/gerenciadas pela direção ou pelo desenvolvedor, de acordo com as permissões da gestão de usuários.
 6. **Nenhuma rota da API verifica o cargo do chamador** — a distinção de permissões é inteiramente do lado do cliente (quais botões aparecem em cada view). Ver limitações (seção 8).
 
 ## 5. Registros históricos de certificados
@@ -136,9 +137,9 @@ Adicionalmente, `vite.config.ts` injeta `process.env.GEMINI_API_KEY` como `defin
 
 ## 9. Vulnerabilidades conhecidas
 
-### 9.1 Auto-cadastro como Diretor/admin (crítica) — ✅ corrigida em 2026-09-10
+### 9.1 Auto-cadastro público — cadastro desativado
 
-**Status**: corrigida. `POST /api/auth/register` agora ignora completamente qualquer `role` vindo do corpo da requisição e sempre cria a conta como `'teacher'` (`server.ts`, rota `/api/auth/register`); o `<select id="auth-role">` foi removido do modal de cadastro público em `LandingView`, e `actions.register()` não lê nem envia mais `role`. A função `handleRoleChange()`, que só existia para esconder/mostrar o campo de matéria conforme o perfil escolhido, foi removida (órfã — nenhum outro elemento chamava). O campo de matéria (`#auth-subject`) agora é sempre exibido no cadastro, já que todo auto-cadastro é professor. Promoção a `admin`/`developer` continua existindo, mas só via `PATCH /api/users/:uid/role` (usável por uma conta admin/developer já existente) — ver 9.2 para a limitação que ainda cerca essa rota.
+**Estado atual**: o modal não oferece criação de conta e `POST /api/auth/register` responde `403`. Direção e desenvolvedor criam contas pela gestão de usuários. O histórico da vulnerabilidade e sua correção anterior ficam registrados abaixo.
 
 O histórico do problema original fica registrado abaixo para referência.
 

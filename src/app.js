@@ -94,7 +94,10 @@ let devErrorLogs = [];
 let devPanelErrors = {};
 let stats = { total: 0, confirmed: 0, absent: 0, pending: 0 };
 let currentTab = 'horarios';
-let authMode = 'closed'; // 'login', 'register' or 'closed'
+let authMode = 'closed'; // 'login' or 'closed'
+let loginSchools = [];
+let loginSchoolsState = 'idle';
+let loginSchoolsError = '';
 let labBookings = [];
 let labFilters = { date: '', labId: 'all', teacher: '' };
 let reportWeek = 'all';
@@ -646,7 +649,7 @@ const LandingView = () => `
         <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Como Funciona</a>
         <a onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">Recursos</a>
         <a onclick="document.getElementById('faq').scrollIntoView({behavior:'smooth'})" style="color: #94a3b8; text-decoration: none; font-weight: 500; cursor: pointer; transition: all 0.3s; font-size: 0.95rem;">FAQ</a>
-        <button onclick="actions.showLoginModal('login')" style="background: #2563eb; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">Acessar Portal</button>
+        <button onclick="actions.showLoginModal()" style="background: #2563eb; color: white; border: none; padding: 0.7rem 1.5rem; border-radius: 0.5rem; font-weight: 600; cursor: pointer; transition: all 0.3s;">Acessar Portal</button>
       </div>
     </nav>
 
@@ -659,7 +662,7 @@ const LandingView = () => `
         <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem; letter-spacing: -1px;">A rotina da escola<br><span style="background: linear-gradient(135deg, #2563eb, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">mais organizada</span><br>e fácil de acompanhar.</h1>
         <p style="font-size: 1.25rem; color: #cbd5e1; margin-bottom: 2.5rem; max-width: 600px; margin-left: auto; margin-right: auto; line-height: 1.6;">Consulte horários, acompanhe as turmas e organize o uso dos laboratórios em uma plataforma simples para professores e direção.</p>
         <div style="display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap;">
-          <button onclick="actions.showLoginModal('login')" style="background: #2563eb; color: white; border: none; padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 30px rgba(37, 99, 235, 0.3);">🎓 Entrar no Portal da Escola</button>
+          <button onclick="actions.showLoginModal()" style="background: #2563eb; color: white; border: none; padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s; box-shadow: 0 0 30px rgba(37, 99, 235, 0.3);">🎓 Entrar no Portal da Escola</button>
           <button onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})" style="background: transparent; color: white; border: 2px solid rgba(255, 255, 255, 0.2); padding: 1.2rem 2.5rem; border-radius: 0.7rem; font-weight: 700; font-size: 1rem; cursor: pointer; transition: all 0.3s;">Conhecer recursos</button>
         </div>
         <div style="display: flex; gap: 3rem; justify-content: center; margin-top: 3rem; flex-wrap: wrap; font-weight: 600; font-size: 0.9rem;">
@@ -753,28 +756,36 @@ const LandingView = () => `
       <p style="margin-top: 1rem; font-size: 0.9rem;">Horários, reservas de laboratório e relatórios para a rotina escolar.</p>
     </footer>
 
-    <!-- Login/Register Modal -->
+    <!-- Login Modal -->
     <div id="login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 ${authMode === 'closed' ? 'hidden' : ''}">
       <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="actions.hideLoginModal()"></div>
       <div class="bg-white w-full max-w-md rounded-2xl p-8 relative z-10 shadow-2xl border border-slate-200">
         <div class="flex justify-center mb-6">
           ${Logo(160, 44)}
         </div>
-        <div class="flex gap-2 mb-8 bg-slate-100 p-1.5 rounded-xl">
-            <button onclick="actions.toggleAuthMode('login')" class="flex-1 py-2 rounded-lg font-bold text-sm transition-all ${authMode === 'login' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}">Entrar</button>
-            <button onclick="actions.toggleAuthMode('register')" class="flex-1 py-2 rounded-lg font-bold text-sm transition-all ${authMode === 'register' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}">Criar Conta</button>
-        </div>
-
-        <h3 class="text-2xl font-bold mb-2">${authMode === 'login' ? 'Bem-vindo de volta' : 'Nova conta Studia'}</h3>
+        <h3 class="text-2xl font-bold mb-5 text-slate-900">Bem-vindo de volta</h3>
         <div class="space-y-4">
-          ${authMode === 'register' ? `
-            <input type="text" id="auth-name" placeholder="Seu nome completo" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
+          <label class="block text-xs font-bold text-slate-500">
+            Escola
+            <select id="auth-school" class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900" ${loginSchoolsState === 'loading' || loginSchoolsState === 'error' || loginSchoolsState === 'empty' ? 'disabled' : ''}>
+              <option value="">Selecione sua escola</option>
+              ${loginSchoolsState === 'loading' ? '<option disabled>Carregando escolas...</option>' : ''}
+              ${loginSchoolsState === 'empty' ? '<option disabled>Nenhuma escola cadastrada ainda</option>' : ''}
+              ${loginSchoolsState === 'error' ? '<option disabled>Não foi possível carregar as escolas</option>' : ''}
+              ${loginSchools.map(school => `<option value="${escapeHtml(school.id)}">${escapeHtml(school.name)}</option>`).join('')}
+            </select>
+          </label>
+          ${loginSchoolsState === 'error' ? `
+            <div class="flex items-center justify-between gap-3 rounded-lg bg-rose-50 p-3">
+              <p class="text-xs font-medium text-rose-700">${escapeHtml(loginSchoolsError || 'Não foi possível carregar as escolas.')}</p>
+              <button type="button" onclick="actions.loadLoginSchools()" class="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-100">Tentar novamente</button>
+            </div>
           ` : ''}
           <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
           <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
 
-          <button onclick="${authMode === 'login' ? 'actions.login()' : 'actions.register()'}" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md shadow-blue-500/15 mt-2 transition-all">
-            ${authMode === 'login' ? 'Entrar' : 'Cadastrar'}
+          <button onclick="actions.login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md shadow-blue-500/15 mt-2 transition-all">
+            Entrar
           </button>
         </div>
       </div>
@@ -2850,18 +2861,37 @@ const actions = {
     }
   },
 
-  showLoginModal(mode = 'login') {
-    authMode = mode;
+  showLoginModal() {
+    authMode = 'login';
+    loginSchoolsState = 'loading';
+    loginSchoolsError = '';
     this.init();
+    this.loadLoginSchools();
+  },
+
+  async loadLoginSchools() {
+    loginSchoolsState = 'loading';
+    loginSchoolsError = '';
+    if (authMode === 'login') this.renderCurrentView();
+
+    try {
+      const result = await api.get('/api/public/schools');
+      if (!Array.isArray(result)) throw new Error('Resposta inválida ao carregar escolas.');
+      loginSchools = result.filter(school =>
+        school && typeof school.id === 'string' && typeof school.name === 'string'
+      );
+      loginSchoolsState = loginSchools.length ? 'loaded' : 'empty';
+    } catch (err) {
+      loginSchools = [];
+      loginSchoolsState = 'error';
+      loginSchoolsError = err.message || 'Não foi possível carregar as escolas.';
+    }
+
+    if (authMode === 'login') this.renderCurrentView();
   },
 
   hideLoginModal() {
     authMode = 'closed';
-    this.init();
-  },
-
-  toggleAuthMode(mode) {
-    authMode = mode;
     this.init();
   },
 
@@ -3166,42 +3196,20 @@ const actions = {
   },
 
   async login() {
+    const schoolInput = $('#auth-school');
     const emailInput = $('#auth-email');
     const passwordInput = $('#auth-password');
-    if (!emailInput || !passwordInput) return;
+    if (!schoolInput || !emailInput || !passwordInput) return;
 
+    const schoolId = schoolInput.value;
     const email = emailInput.value;
     const password = passwordInput.value;
+    if (!schoolId) return showDialog('Selecione sua escola para continuar.');
+    if (loginSchoolsState !== 'loaded') return showDialog('A lista de escolas ainda não está disponível. Tente novamente.');
     if (!email || !password) return showDialog('Por favor, preencha todos os campos.');
     
     try {
-      user = await api.post('/api/auth/login', { email, password });
-      localStorage.setItem('user', JSON.stringify(user));
-      authMode = 'closed';
-      this.init();
-    } catch (err) {
-      showDialog(err.message);
-    }
-  },
-
-  async register() {
-    const emailInput = $('#auth-email');
-    const passwordInput = $('#auth-password');
-    const nameInput = $('#auth-name');
-
-    if (!emailInput || !passwordInput || !nameInput) return;
-
-    const email = emailInput.value.trim();
-    const password = passwordInput.value;
-    const displayName = nameInput.value.trim();
-
-    if (!email || !password || !displayName) return showDialog('Por favor, preencha todos os campos.');
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) return showDialog('E-mail inválido. Use um endereço válido.');
-
-    try {
-      user = await api.post('/api/auth/register', { email, password, displayName });
+      user = await api.post('/api/auth/login', { email, password, schoolId });
       localStorage.setItem('user', JSON.stringify(user));
       authMode = 'closed';
       this.init();
