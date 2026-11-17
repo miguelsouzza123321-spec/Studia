@@ -631,7 +631,7 @@ app.patch('/api/schedules/:id', async (req, res) => {
   }
   const onlyStatus = status !== undefined && date === undefined && startTime === undefined && endTime === undefined && subject === undefined && room === undefined && teacherId === undefined && teacherName === undefined && classGroup === undefined && turno === undefined;
   const updates = onlyStatus
-    ? { status, updatedat: new Date().toISOString() }
+    ? { status }
     : {
         status,
         date,
@@ -642,8 +642,7 @@ app.patch('/api/schedules/:id', async (req, res) => {
         teacherid: teacherId,
         teachername: teacherName,
         classgroup: classGroup,
-        turno,
-        updatedat: new Date().toISOString()
+        turno
       };
   const { data: updatedSchedule, error } = await supabase
     .from('schedules')
