@@ -98,6 +98,7 @@ let authMode = 'closed'; // 'login' or 'closed'
 let loginSchools = [];
 let loginSchoolsState = 'idle';
 let loginSchoolsError = '';
+let selectedLoginSchoolId = '';
 let labBookings = [];
 let labFilters = { date: '', labId: 'all', teacher: '' };
 let reportWeek = 'all';
@@ -767,12 +768,12 @@ const LandingView = () => `
         <div class="space-y-4">
           <label class="block text-xs font-bold text-slate-500">
             Escola
-            <select id="auth-school" class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900" ${loginSchoolsState === 'loading' || loginSchoolsState === 'error' || loginSchoolsState === 'empty' ? 'disabled' : ''}>
+            <select id="auth-school" onchange="actions.selectLoginSchool(this.value)" class="mt-1 w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900" ${loginSchoolsState === 'loading' || loginSchoolsState === 'error' || loginSchoolsState === 'empty' ? 'disabled' : ''}>
               <option value="">Selecione sua escola</option>
               ${loginSchoolsState === 'loading' ? '<option disabled>Carregando escolas...</option>' : ''}
               ${loginSchoolsState === 'empty' ? '<option disabled>Nenhuma escola cadastrada ainda</option>' : ''}
               ${loginSchoolsState === 'error' ? '<option disabled>Não foi possível carregar as escolas</option>' : ''}
-              ${loginSchools.map(school => `<option value="${escapeHtml(school.id)}">${escapeHtml(school.name)}</option>`).join('')}
+              ${loginSchools.map(school => `<option value="${escapeHtml(school.id)}" ${selectedLoginSchoolId === school.id ? 'selected' : ''}>${escapeHtml(school.name)}</option>`).join('')}
             </select>
           </label>
           ${loginSchoolsState === 'error' ? `
@@ -781,12 +782,13 @@ const LandingView = () => `
               <button type="button" onclick="actions.loadLoginSchools()" class="shrink-0 rounded-lg bg-white px-3 py-2 text-xs font-bold text-rose-700 shadow-sm hover:bg-rose-100">Tentar novamente</button>
             </div>
           ` : ''}
-          <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
-          <input type="password" id="auth-password" placeholder="Sua senha" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
-
-          <button onclick="actions.login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md shadow-blue-500/15 mt-2 transition-all">
-            Entrar
-          </button>
+          ${selectedLoginSchoolId && loginSchoolsState === 'loaded' && loginSchools.some(school => school.id === selectedLoginSchoolId) ? `
+            <input type="email" id="auth-email" placeholder="nome@escola.pr.gov.br" autocomplete="username" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
+            <input type="password" id="auth-password" placeholder="Sua senha" autocomplete="current-password" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-medium text-sm text-slate-900">
+            <button onclick="actions.login()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold shadow-md shadow-blue-500/15 mt-2 transition-all">
+              Entrar
+            </button>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -2865,6 +2867,8 @@ const actions = {
     authMode = 'login';
     loginSchoolsState = 'loading';
     loginSchoolsError = '';
+    loginSchools = [];
+    selectedLoginSchoolId = '';
     this.init();
     this.loadLoginSchools();
   },
@@ -2872,6 +2876,7 @@ const actions = {
   async loadLoginSchools() {
     loginSchoolsState = 'loading';
     loginSchoolsError = '';
+    selectedLoginSchoolId = '';
     if (authMode === 'login') this.renderCurrentView();
 
     try {
@@ -2893,6 +2898,12 @@ const actions = {
   hideLoginModal() {
     authMode = 'closed';
     this.init();
+  },
+
+  selectLoginSchool(schoolId) {
+    selectedLoginSchoolId = loginSchools.some(school => school.id === schoolId) ? schoolId : '';
+    this.renderCurrentView();
+    if (selectedLoginSchoolId) $('#auth-email')?.focus();
   },
 
   submitContact(event) {
@@ -3196,15 +3207,18 @@ const actions = {
   },
 
   async login() {
-    const schoolInput = $('#auth-school');
     const emailInput = $('#auth-email');
     const passwordInput = $('#auth-password');
-    if (!schoolInput || !emailInput || !passwordInput) return;
+    if (!emailInput || !passwordInput) {
+      return showDialog('Selecione sua escola para exibir os campos de acesso.');
+    }
 
-    const schoolId = schoolInput.value;
+    const schoolId = selectedLoginSchoolId;
     const email = emailInput.value;
     const password = passwordInput.value;
-    if (!schoolId) return showDialog('Selecione sua escola para continuar.');
+    if (!schoolId || !loginSchools.some(school => school.id === schoolId)) {
+      return showDialog('Selecione sua escola para continuar.');
+    }
     if (loginSchoolsState !== 'loaded') return showDialog('A lista de escolas ainda não está disponível. Tente novamente.');
     if (!email || !password) return showDialog('Por favor, preencha todos os campos.');
     
