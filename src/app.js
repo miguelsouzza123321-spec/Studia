@@ -1,6 +1,13 @@
 // --- DOM HELPERS ---
 const $ = (selector) => document.querySelector(selector);
 window.$ = $;
+const escapeHtml = value => String(value || '').replace(/[&<>"']/g, character => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+})[character]);
 const Logo = (width = 180, height = 50) => `
   <svg width="${width}" height="${height}" viewBox="0 0 240 65" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
     <!-- Light Blue Ribbon/Swoosh flourishes around the text -->
@@ -94,6 +101,8 @@ let reportWeek = 'all';
 let reportTurno = 'todos';
 let scheduleListTurno = 'todos';
 let teacherTurno = 'todos';
+let teacherSubjectSearch = '';
+let expandedTeacherSubjectCards = new Set();
 let reportTeacher = 'all';
 let schoolName = 'COLÉGIO ESTADUAL PROF. JÚLIO SZYMANSKI - MATUTINO';
 let currentRelatorioSubTab = 'urania';
@@ -802,7 +811,10 @@ const TeacherView = () => {
           <button onclick="actions.toggleMobileMenu(true)" class="md:hidden p-2 -ml-2 text-slate-600 hover:bg-slate-50 rounded-lg" id="btn-toggle-mobile-menu">
             <i data-lucide="menu" class="w-6 h-6"></i>
           </button>
-          <h2 class="font-bold text-base md:text-lg capitalize">${currentTab === 'horarios' ? 'Meus Horários' : (currentTab === 'labs' ? 'Laboratórios' : 'Minhas Matérias')}</h2>
+          <div>
+            <h2 class="font-bold text-base md:text-lg capitalize">${currentTab === 'horarios' ? 'Meus Horários' : (currentTab === 'labs' ? 'Laboratórios' : 'Minhas Matérias')}</h2>
+            ${currentTab === 'materias' ? '<p class="hidden text-xs font-medium text-slate-500 sm:block">Veja suas matérias e as turmas de cada uma.</p>' : ''}
+          </div>
         </div>
         <div class="flex gap-2">
           ${currentTab === 'labs' ? `
@@ -2154,74 +2166,165 @@ const HorariosTab = () => `
 `;
 
 const MateriasTab = () => `
-  <div class="space-y-8 animate-fade-in">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h3 class="text-xl md:text-2xl font-black text-slate-900">Minhas Matérias</h3>
-        <p class="text-xs md:text-sm text-slate-500 font-bold">Gerencie as matérias que você leciona.</p>
-      </div>
-      <button onclick="actions.showAddMatériaModal()" class="bg-blue-600 hover:bg-blue-700 transition-all text-white px-5 py-2.5 rounded-lg font-bold flex items-center gap-2 text-sm shadow-md">
-        <i data-lucide="plus" class="w-4 h-4"></i> Adicionar Matéria
-      </button>
+  <div class="space-y-6 animate-fade-in">
+    <div>
+      <h3 class="text-xl md:text-2xl font-black text-slate-900">Minhas Matérias</h3>
+      <p class="text-xs md:text-sm text-slate-500 font-medium">Consulte suas matérias, turmas e quantidade de aulas semanais.</p>
     </div>
 
-    <div class="space-y-5">
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-        <h4 class="text-sm font-black uppercase tracking-[0.18em] text-slate-400 mb-4">Editar minhas matérias</h4>
-        ${(() => {
-          const availableSubjects = (schoolSubjects || []).filter(item => item.school_id === user?.school_id);
-          const mySubjects = new Set((window.teacherSubjects || []).map(item => item.subject));
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_12rem]">
+      <label class="text-xs font-bold text-slate-500">
+        Buscar matéria ou turma
+        <input id="teacher-subject-search" type="search" value="${escapeHtml(teacherSubjectSearch)}" oninput="actions.setTeacherSubjectSearch(this.value)" placeholder="Ex.: Matemática, 7º A" class="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-700 outline-none focus:ring-2 focus:ring-blue-500">
+      </label>
+      <label class="text-xs font-bold text-slate-500">
+        Turno
+        <select onchange="actions.setTeacherTurno(this.value)" class="mt-1 block w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-700">
+          <option value="todos" ${teacherTurno === 'todos' ? 'selected' : ''}>Todos</option>
+          <option value="manha" ${teacherTurno === 'manha' ? 'selected' : ''}>Manhã</option>
+          <option value="tarde" ${teacherTurno === 'tarde' ? 'selected' : ''}>Tarde</option>
+          <option value="noite" ${teacherTurno === 'noite' ? 'selected' : ''}>Noite</option>
+        </select>
+      </label>
+    </div>
 
-          if (!availableSubjects.length) {
-            return `<p class="text-sm font-medium text-slate-500">Ainda não há matérias cadastradas para a sua escola.</p>`;
+    ${(() => {
+      const normalize = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pt-BR');
+      const search = normalize(teacherSubjectSearch);
+      const assignedSubjects = window.teacherSubjects || [];
+      const teacherSchedules = schedules.filter(schedule =>
+        schedule.teacherId === user?.uid &&
+        ['confirmed', 'pending'].includes(schedule.status) &&
+        (teacherTurno === 'todos' || getScheduleTurno(schedule) === teacherTurno)
+      );
+      const assignedNames = new Set(assignedSubjects.map(item => normalize(item.subject)));
+
+      const buildClasses = subjectSchedules => {
+        const classGroups = new Map();
+        subjectSchedules.forEach(schedule => {
+          const className = String(schedule.classGroup || '').trim();
+          const normalizedClass = normalize(className);
+          if (!normalizedClass || normalizedClass === 'sem_turma') return;
+
+          const turno = getScheduleTurno(schedule);
+          const key = `${normalizedClass}|${turno}`;
+          if (!classGroups.has(key)) {
+            classGroups.set(key, { name: className, turno, lessons: new Set() });
           }
 
-          return `
-            <div class="flex flex-wrap gap-2">
-              ${availableSubjects.map(subject => {
-                const checked = mySubjects.has(subject.subject);
-                return `
-                  <label class="inline-flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-bold ${checked ? 'border-blue-200 bg-blue-50 text-blue-800' : 'border-slate-200 bg-slate-50 text-slate-600'}">
-                    <input type="checkbox" ${checked ? 'checked' : ''} onchange="actions.setTeacherSubject('${subject.id}', '${user.uid}', this.checked)" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                    ${subject.subject}
-                  </label>
-                `;
-              }).join('')}
+          const date = parseLocalDate(schedule.date);
+          if (!Number.isNaN(date.getTime())) {
+            const lessonTime = `${String(schedule.startTime || '').slice(0, 5)}-${String(schedule.endTime || '').slice(0, 5)}`;
+            classGroups.get(key).lessons.add(`${getDayOfWeek(date)}|${lessonTime}`);
+          }
+        });
+
+        return [...classGroups.values()].sort((a, b) =>
+          a.name.localeCompare(b.name, 'pt-BR') || a.turno.localeCompare(b.turno)
+        );
+      };
+
+      const renderClassList = classGroups => classGroups.length ? `
+        <div class="grid gap-3 sm:grid-cols-2">
+          ${classGroups.map(group => `
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <h5 class="font-bold text-slate-800">${escapeHtml(formatCompactClassGroup(group.name))}</h5>
+                <span class="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black uppercase text-blue-700">${TURNO_LABELS[group.turno]}</span>
+              </div>
+              <p class="mt-2 text-xs font-medium text-slate-500">${group.lessons.size} ${group.lessons.size === 1 ? 'aula' : 'aulas'} na semana</p>
             </div>
-          `;
-        })()}
-      </div>
+          `).join('')}
+        </div>
+      ` : '<p class="rounded-xl bg-slate-50 p-4 text-sm font-medium text-slate-500">Nenhuma turma cadastrada.</p>';
 
-      <div class="grid gap-4">
-        ${(() => {
-          const teacherSubjects = window.teacherSubjects || [];
-          if (teacherSubjects.length === 0) {
-            return `
-              <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center">
-                <i data-lucide="book" class="w-12 h-12 text-slate-300 mx-auto mb-4"></i>
-                <p class="text-slate-400 font-bold">Você ainda não adicionou nenhuma matéria.</p>
-              </div>
-            `;
-          }
-          return teacherSubjects.map(s => `
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6 flex items-center justify-between hover:shadow-md transition-all">
-              <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <i data-lucide="book-open" class="w-6 h-6 text-blue-600"></i>
-                </div>
-                <div>
-                  <h4 class="font-bold text-slate-900">${s.subject}</h4>
-                  <p class="text-xs text-slate-400">Matéria</p>
-                </div>
-              </div>
-              <button onclick="actions.deleteMatéria('${s.subject}')" class="text-rose-600 hover:bg-rose-50 p-2 rounded-lg transition-all">
-                <i data-lucide="trash-2" class="w-5 h-5"></i>
+      const subjectCards = assignedSubjects.map((subject, index) => {
+        const normalizedSubject = normalize(subject.subject);
+        const schedulesForSubject = teacherSchedules.filter(schedule => normalize(schedule.subject) === normalizedSubject);
+        const classGroups = buildClasses(schedulesForSubject);
+        const subjectMatches = normalizedSubject.includes(search);
+        const visibleClasses = !search || subjectMatches
+          ? classGroups
+          : classGroups.filter(group => normalize(group.name).includes(search));
+        if (search && !subjectMatches && visibleClasses.length === 0) return '';
+
+        const expanded = expandedTeacherSubjectCards.has(index);
+        return `
+          <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <button type="button" onclick="actions.toggleTeacherSubjectCard(${index})" aria-expanded="${expanded}" class="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-slate-50 sm:p-5">
+              <span class="flex min-w-0 items-center gap-3">
+                <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><i data-lucide="book-open" class="h-5 w-5"></i></span>
+                <span class="min-w-0">
+                  <span class="block truncate font-black text-slate-900">${escapeHtml(subject.subject)}</span>
+                  <span class="mt-1 block text-xs font-medium text-slate-500">${visibleClasses.length} ${visibleClasses.length === 1 ? 'turma' : 'turmas'}</span>
+                </span>
+              </span>
+              <i data-lucide="${expanded ? 'chevron-up' : 'chevron-down'}" class="h-5 w-5 shrink-0 text-slate-400"></i>
+            </button>
+            ${expanded ? `<div class="border-t border-slate-100 p-4 sm:p-5">${renderClassList(visibleClasses)}</div>` : ''}
+          </article>
+        `;
+      }).join('');
+
+      const otherSchedulesBySubject = new Map();
+      teacherSchedules.forEach(schedule => {
+        if (assignedNames.has(normalize(schedule.subject))) return;
+        const name = String(schedule.subject || '').trim() || 'Matéria não identificada';
+        const key = normalize(name);
+        if (!otherSchedulesBySubject.has(key)) otherSchedulesBySubject.set(key, { name, schedules: [] });
+        otherSchedulesBySubject.get(key).schedules.push(schedule);
+      });
+
+      const otherSubjects = [...otherSchedulesBySubject.values()]
+        .map(subject => ({ ...subject, classes: buildClasses(subject.schedules) }))
+        .filter(subject => !search || normalize(subject.name).includes(search) || subject.classes.some(group => normalize(group.name).includes(search)))
+        .map(subject => ({
+          ...subject,
+          classes: !search || normalize(subject.name).includes(search)
+            ? subject.classes
+            : subject.classes.filter(group => normalize(group.name).includes(search))
+        }));
+      const showOtherSubjects = otherSubjects.length > 0;
+      const otherExpanded = expandedTeacherSubjectCards.has(-1);
+      const noAssignedSubjects = assignedSubjects.length === 0;
+
+      return `
+        ${noAssignedSubjects ? `
+          <div class="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm font-semibold text-amber-800">
+            Você ainda não tem matérias vinculadas. Peça à direção pedagógica para associar suas matérias.
+          </div>
+        ` : ''}
+        <div class="space-y-3">
+          ${subjectCards}
+          ${showOtherSubjects ? `
+            <article class="overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-sm">
+              <button type="button" onclick="actions.toggleTeacherSubjectCard(-1)" aria-expanded="${otherExpanded}" class="flex w-full items-center justify-between gap-4 p-4 text-left transition-colors hover:bg-amber-50 sm:p-5">
+                <span class="flex min-w-0 items-center gap-3">
+                  <span class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><i data-lucide="book-open" class="h-5 w-5"></i></span>
+                  <span class="min-w-0">
+                    <span class="block font-black text-slate-900">Outras matérias nos meus horários</span>
+                    <span class="mt-1 block text-xs font-medium text-slate-500">Aulas sem vínculo na lista de matérias</span>
+                  </span>
+                </span>
+                <i data-lucide="${otherExpanded ? 'chevron-up' : 'chevron-down'}" class="h-5 w-5 shrink-0 text-slate-400"></i>
               </button>
-            </div>
-          `).join('');
-        })()}
-      </div>
-    </div>
+              ${otherExpanded ? `
+                <div class="space-y-5 border-t border-slate-100 p-4 sm:p-5">
+                  ${otherSubjects.map(subject => `
+                    <section>
+                      <h5 class="mb-3 font-black text-slate-800">${escapeHtml(subject.name)}</h5>
+                      ${renderClassList(subject.classes)}
+                    </section>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </article>
+          ` : ''}
+          ${!subjectCards && !showOtherSubjects && !noAssignedSubjects ? '<p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-medium text-slate-500">Nenhuma matéria ou turma corresponde à busca e ao turno selecionados.</p>' : ''}
+          ${subjectCards === '' && !showOtherSubjects && noAssignedSubjects ? '<p class="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-medium text-slate-500">Não há horários para exibir com esses filtros.</p>' : ''}
+        </div>
+      `;
+    })()}
   </div>
 `;
 
@@ -2673,6 +2776,22 @@ const actions = {
     this.renderCurrentView();
   },
 
+  setTeacherSubjectSearch(value) {
+    teacherSubjectSearch = value;
+    const searchInput = $('#teacher-subject-search');
+    const cursorPosition = searchInput?.selectionStart ?? value.length;
+    this.renderCurrentView();
+    const updatedSearchInput = $('#teacher-subject-search');
+    updatedSearchInput?.focus();
+    updatedSearchInput?.setSelectionRange(cursorPosition, cursorPosition);
+  },
+
+  toggleTeacherSubjectCard(cardId) {
+    if (expandedTeacherSubjectCards.has(cardId)) expandedTeacherSubjectCards.delete(cardId);
+    else expandedTeacherSubjectCards.add(cardId);
+    this.renderCurrentView();
+  },
+
   switchTabMobile(tab) {
     if (!TAB_ACCESS[user?.role]?.includes(tab)) return;
     currentTab = tab;
@@ -3097,38 +3216,6 @@ const actions = {
     currentTab = 'horarios';
     authMode = 'closed';
     this.init();
-  },
-
-  showAddMatériaModal() {
-    const subject = prompt('Informe a matéria que você leciona:');
-    if (!subject) return;
-    this.addMatéria(subject);
-  },
-
-  async addMatéria(subject) {
-    if (!user || !user.uid) return;
-    try {
-      const res = await api.post(`/api/teachers/${user.uid}/subjects`, { subject });
-      if (!window.teacherSubjects) window.teacherSubjects = [];
-      window.teacherSubjects.push(res);
-      render(TeacherView());
-      lucide.createIcons();
-    } catch (err) {
-      showDialog(err.message);
-    }
-  },
-
-  async deleteMatéria(subject) {
-    if (!user || !user.uid) return;
-    if (!confirm(`Deseja remover a matéria "${subject}"?`)) return;
-    try {
-      await api.delete(`/api/teachers/${user.uid}/subjects/${encodeURIComponent(subject)}`);
-      window.teacherSubjects = (window.teacherSubjects || []).filter(m => m.subject !== subject);
-      render(TeacherView());
-      lucide.createIcons();
-    } catch (err) {
-      showDialog(err.message);
-    }
   },
 
   normalizeSchedules(schedules) {

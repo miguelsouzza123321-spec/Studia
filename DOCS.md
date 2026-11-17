@@ -44,6 +44,7 @@ Sidebar clara, 5 abas:
 Sidebar com 3 abas:
 - **Meus Horários**: grade semanal só com as aulas do próprio professor (`GET /api/schedules?teacherId=...`), sem edição — só visualização e exportação em PDF individual.
 - **Laboratórios**: agenda compartilhada da escola; o professor pode excluir suas próprias reservas.
+- **Minhas Matérias** (`MateriasTab`): consulta matérias vinculadas e as turmas/quantidade de aulas semanais encontradas nos horários; professores não podem alterar vínculos.
 
 O cadastro público (`LandingView`) não tem seleção de perfil — todo auto-cadastro cria uma conta `teacher`. Contas `diretor` e `admin` só existem promovendo um usuário já cadastrado via o dropdown de perfil na aba Usuários (ver §9.1 e §5 acima).
 
@@ -66,6 +67,9 @@ Nenhuma rota valida token/sessão do chamador — a API confia em quem fizer a r
 | `DELETE /api/schedules/:id` | Exclui um horário. |
 | `GET /api/stats` | Conta horários por status (`total`, `confirmed`, `absent`, `pending`). |
 | `GET /api/teachers` | Lista usuários com `role = 'teacher'`. |
+| `GET /api/teachers/:uid/subjects` | Lista matérias vinculadas; professores só podem consultar as próprias. |
+| `POST /api/teachers/:uid/subjects` / `DELETE /api/teachers/:uid/subjects/:subject` | Altera vínculos de matérias; permitido somente à direção e ao desenvolvedor. |
+| `POST /api/school-subjects/:id/teachers` / `DELETE /api/school-subjects/:id/teachers/:teacherId` | Vincula/desvincula matéria de professor; permitido somente à direção e ao desenvolvedor. |
 | `GET /api/users` | Lista todos os usuários, ordenado por nome. |
 | `DELETE /api/users/:uid` | Remove o usuário do Supabase Auth e da tabela `users`. |
 | `PATCH /api/users/:uid/role` | Atualiza o `role` de um usuário (`teacher`/`diretor`/`admin`). |

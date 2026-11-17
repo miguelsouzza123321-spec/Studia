@@ -1450,6 +1450,23 @@ app.get('/api/school-subjects', async (req, res) => {
   })));
 });
 
+const requireSubjectManager = async (req: any, res: any): Promise<UserInfo | null> => {
+  const userInfo = await validateUserPermission(req);
+  if (!userInfo) {
+    res.status(401).json({ error: 'Não autorizado' });
+    return null;
+  }
+  if (userInfo.role === 'teacher') {
+    res.status(403).json({ error: 'Professores podem apenas consultar matérias. Peça à direção pedagógica para alterar os vínculos.' });
+    return null;
+  }
+  if (!['dev', 'diretor'].includes(userInfo.role)) {
+    res.status(403).json({ error: 'Apenas direção e desenvolvedor podem alterar vínculos de matérias.' });
+    return null;
+  }
+  return userInfo;
+};
+
 app.post('/api/school-subjects', async (req, res) => {
   const userInfo = await requireRole(req, res, ['dev', 'diretor']);
   if (!userInfo) return;
@@ -1507,7 +1524,7 @@ app.delete('/api/school-subjects/:id', async (req, res) => {
 });
 
 app.post('/api/school-subjects/:id/teachers', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['dev', 'diretor', 'teacher']);
+  const userInfo = await requireSubjectManager(req, res);
   if (!userInfo) return;
   const teacherId = typeof req.body.teacherId === 'string' ? req.body.teacherId : '';
   if (!teacherId) return res.status(400).json({ error: 'Professor obrigatório' });
@@ -1522,17 +1539,8 @@ app.post('/api/school-subjects/:id/teachers', async (req, res) => {
   if (userInfo.role === 'diretor' && !userInfo.school_id) {
     return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
   }
-  if (userInfo.role === 'teacher' && !userInfo.school_id) {
-    return res.status(403).json({ error: 'Sua conta não está associada a uma escola' });
-  }
   if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
     return res.status(403).json({ error: 'Acesso negado' });
-  }
-  if (userInfo.role === 'teacher' && subject.school_id !== userInfo.school_id) {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-  if (userInfo.role === 'teacher' && teacherId !== userInfo.uid) {
-    return res.status(403).json({ error: 'Você só pode vincular suas próprias matérias' });
   }
 
   const teacher = await getUserFromDB(teacherId);
@@ -1549,7 +1557,7 @@ app.post('/api/school-subjects/:id/teachers', async (req, res) => {
 });
 
 app.delete('/api/school-subjects/:id/teachers/:teacherId', async (req, res) => {
-  const userInfo = await requireRole(req, res, ['dev', 'diretor', 'teacher']);
+  const userInfo = await requireSubjectManager(req, res);
   if (!userInfo) return;
 
   const { data: subject, error: subjectError } = await supabase
@@ -1562,13 +1570,6 @@ app.delete('/api/school-subjects/:id/teachers/:teacherId', async (req, res) => {
   if (userInfo.role === 'diretor' && subject.school_id !== userInfo.school_id) {
     return res.status(403).json({ error: 'Acesso negado' });
   }
-  if (userInfo.role === 'teacher' && subject.school_id !== userInfo.school_id) {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
-  if (userInfo.role === 'teacher' && req.params.teacherId !== userInfo.uid) {
-    return res.status(403).json({ error: 'Você só pode remover suas próprias matérias' });
-  }
-
   const { error } = await supabase.from('teacher_subjects')
     .delete()
     .eq('subject_id', subject.id)
@@ -1612,12 +1613,8 @@ app.get('/api/teachers/:uid/subjects', async (req, res) => {
 });
 
 app.post('/api/teachers/:uid/subjects', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-
-  if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
+  const userInfo = await requireSubjectManager(req, res);
+  if (!userInfo) return;
   if (userInfo.role === 'diretor') {
     const teacher = await getUserFromDB(req.params.uid);
     if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
@@ -1645,12 +1642,8 @@ app.post('/api/teachers/:uid/subjects', async (req, res) => {
 });
 
 app.delete('/api/teachers/:uid/subjects/:subject', async (req, res) => {
-  const userInfo = await validateUserPermission(req);
-  if (!userInfo) return res.status(401).json({ error: 'Não autorizado' });
-
-  if (userInfo.role === 'teacher' && req.params.uid !== userInfo.uid) {
-    return res.status(403).json({ error: 'Acesso negado' });
-  }
+  const userInfo = await requireSubjectManager(req, res);
+  if (!userInfo) return;
   if (userInfo.role === 'diretor') {
     const teacher = await getUserFromDB(req.params.uid);
     if (!teacher || teacher.role !== 'teacher' || teacher.school_id !== userInfo.school_id) {
